@@ -10,6 +10,9 @@ import notesRouter from './routes/notes.js';
 const app = express();
 
 app.use(cors({ origin: config.clientOrigin }));
+// /api/notes accepts PDF uploads (base64 inside JSON), so it gets a bigger limit.
+// It must come before the general 2 MB parser below.
+app.use('/api/notes', express.json({ limit: '25mb' }));
 app.use(express.json({ limit: '2mb' }));
 
 // Health check

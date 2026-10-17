@@ -47,10 +47,12 @@ export const api = {
   deleteQuestionSet: (id) => request(`/question-sets/${id}`, { method: 'DELETE' }),
 
   /**
-   * Send notes to Gemini, which generates questions; the server saves them for
-   * this player and returns the saved set (same shape as getQuestionSet).
-   * Takes ~5–20 seconds, so show a loading state.
-   * @param {{ title?: string, notes: string, sourceFiles?: string[] }} input
+   * Send notes and/or a PDF to Gemini, which generates questions; the server saves them
+   * for this player and returns the saved set (same shape as getQuestionSet).
+   * Takes ~5–20 s for text, longer for PDFs, so show a loading state.
+   * @param {{ title?: string, notes?: string, sourceFiles?: string[],
+   *           file?: { name: string, mimeType: 'application/pdf', data: string } }} input
+   *   file.data = the PDF as base64 (max 15 MB)
    */
   generateQuestions: (input) => request('/notes', { method: 'POST', body: input }),
 };
