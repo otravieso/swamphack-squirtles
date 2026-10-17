@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import LoginRobot from './LoginRobot.jsx';
-import { login, signup } from '../auth/auth.js';
+import { login } from '../auth/auth.js';
 import './login.css';
 
 // Login screen. The button sends the player to Auth0's hosted page (username + password
@@ -45,15 +45,21 @@ export default function LoginPage({ error }) {
         </div>
 
         <div className="lp-card">
-          <p className="lp-error" role="alert">{message}</p>
-          <button type="button" className="lp-submit" disabled={busy} onClick={() => go(login)}>
-            {busy ? 'PLEASE WAIT…' : 'LOG IN'}
-          </button>
-          <p className="lp-note">You'll sign in on a secure Auth0 page.</p>
-          <p className="lp-switch">
-            New here?{' '}
-            <button type="button" disabled={busy} onClick={() => go(signup)}>Register here</button>
-          </p>
+          <h2>WELCOME BACK</h2>
+          <div className="lp-card-body">
+            <p className="lp-lead">The classroom awaits!</p>
+            <p className="lp-error" role="alert">{message}</p>
+            <button type="button" className="lp-submit" disabled={busy} onClick={() => go(login)}>
+              {busy ? 'PLEASE WAIT…' : 'LOG IN'}
+            </button>
+            <p className="lp-note">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="4" y="11" width="16" height="10" rx="2" />
+                <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+              </svg>
+              <span>Secure sign-in with Auth0.</span>
+            </p>
+          </div>
         </div>
       </div>
     </main>

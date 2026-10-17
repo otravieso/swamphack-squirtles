@@ -53,14 +53,22 @@ export default function LoginRobot({ mood = 'idle' }) {
           <circle cx="68" cy="344" r="7" fill="none" stroke="#D96B6B" strokeWidth="2" />
           <path d="M65 344 Q68 348 71 344" fill="none" stroke="#D96B6B" strokeWidth="2" />
         </g>
-        <line x1="262" y1="214" x2="296" y2="122" stroke="#8A6A2E" strokeWidth="13" strokeLinecap="round" />
-        <line x1="262" y1="214" x2="296" y2="122" stroke="#E8C45A" strokeWidth="8" strokeLinecap="round" />
-        <polygon points="291,134 301,130 298,114" fill="#F2DDB0" stroke="#8A6A2E" strokeWidth="2" strokeLinejoin="round" />
-        <circle cx="261" cy="216" r="5" fill="#E58FA3" />
         <path d="M92 262 L86 292" fill="none" stroke="#5E8368" strokeWidth="26" strokeLinecap="round" />
         <path d="M92 262 L86 292" fill="none" stroke="#A9CDA2" strokeWidth="18" strokeLinecap="round" />
         <path d="M240 230 L266 200" fill="none" stroke="#5E8368" strokeWidth="26" strokeLinecap="round" />
         <path d="M240 230 L266 200" fill="none" stroke="#A9CDA2" strokeWidth="18" strokeLinecap="round" />
+        <g transform="translate(262 214) rotate(20)">
+          <rect x="-7" y="-10" width="14" height="10" rx="3" fill="#E58FA3" stroke="#8E4A5C" strokeWidth="2.5" />
+          <rect x="-7" y="-19" width="14" height="9" fill="#C9CDD6" stroke="#6B6F7A" strokeWidth="2.5" />
+          <line x1="-7" y1="-16" x2="7" y2="-16" stroke="#8E93A0" strokeWidth="1.5" />
+          <line x1="-7" y1="-13" x2="7" y2="-13" stroke="#8E93A0" strokeWidth="1.5" />
+          <rect x="-7" y="-74" width="14" height="55" fill="#E8C45A" />
+          <rect x="-7" y="-74" width="5" height="55" fill="#F3D77E" />
+          <rect x="3" y="-74" width="4" height="55" fill="#D2A93C" />
+          <rect x="-7" y="-74" width="14" height="55" fill="none" stroke="#8A6A2E" strokeWidth="2.5" />
+          <polygon points="-7,-74 7,-74 0,-98" fill="#F2DDB0" stroke="#8A6A2E" strokeWidth="2.5" strokeLinejoin="round" />
+          <polygon points="-2.3,-90 2.3,-90 0,-98" fill="#4A4358" />
+        </g>
         <circle cx="85" cy="300" r="12" fill="#3E4450" />
         <circle cx="271" cy="194" r="12" fill="#3E4450" />
         <ellipse cx="160" cy="320" rx="54" ry="11" fill={MINT} stroke="#4C6A57" strokeWidth="3" />
