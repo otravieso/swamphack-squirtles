@@ -30,7 +30,7 @@ export default function App() {
 
   // Logged out (skipped entirely when Auth0 isn't configured)
   if (authEnabled && !auth.user) {
-    return <LoginPage onAuthed={(user) => setAuth({ loading: false, user, error: null })} />;
+        return <LoginPage error={auth.error} />;
   }
 
   // Playing

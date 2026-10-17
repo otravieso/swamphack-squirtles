@@ -1,117 +1,85 @@
-// Auth0 login for the browser, using OUR OWN login form (components/LoginPage.jsx).
+// Auth0 login for the browser.
 //
-// The form sends the username + password straight to Auth0 (password-realm grant)
-// and keeps the returned tokens in localStorage. Auth0 still stores and checks the
-// passwords; we never save them. Setup steps: client/src/auth/README.md
+// Login and sign-up happen on Auth0's hosted page (Universal Login), which shows
+// the username + password form. Users come back to the game already logged in.
+// Passwords never pass through our code.
 //
-//   import { initAuth, loginWithPassword, registerWithPassword, logout } from './auth/auth.js';
-//   const { user } = await initAuth();            // once at startup; user is null if logged out
-//   await loginWithPassword('squirtle', 'pw');    // throws { code, description } on failure
+//   import { initAuth, login, signup, logout } from './auth/auth.js';
+//   const { user } = await initAuth();   // call once when the game starts
+//   if (!user) login();
+import { Auth0Client } from '@auth0/auth0-spa-js';
 
 const domain = import.meta.env.VITE_AUTH0_DOMAIN;
 const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
 const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
-// Name of the Auth0 database connection (Authentication -> Database).
-const connection = import.meta.env.VITE_AUTH0_CONNECTION || 'Username-Password-Authentication';
 
-/** False until the VITE_AUTH0_* values are filled in .env (then login is skipped, "guest" mode) */
+/** False until the VITE_AUTH0_* values are filled in .env */
 export const authEnabled = Boolean(domain && clientId && audience);
 
-const STORAGE_KEY = 'squirtles.session';
+let client = null;
 
-function readSession() {
-  try {
-    const session = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (session && session.expiresAt > Date.now() + 5000) return session;
-  } catch {
-    // corrupted or blocked storage: treat as logged out
-  }
-  try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
-  return null;
-}
-
-function decodeJwt(token) {
-  try {
-    const part = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padded = part + '='.repeat((4 - (part.length % 4)) % 4);
-    return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(padded), (c) => c.charCodeAt(0))));
-  } catch {
-    return {};
-  }
-}
-
-function toUser(idToken) {
-  const claims = decodeJwt(idToken);
-  const username = claims.nickname || claims.name || null;
-  return { sub: claims.sub, username, nickname: username, name: claims.name || username };
-}
-
-async function postJson(url, body) {
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    // Normalise Auth0's different error shapes into { code, description }
-    const error = new Error(data.error_description || data.message || `Request failed (${res.status})`);
-    error.code = data.code || data.error || '';
-    error.description = data.error_description || data.description;
-    throw error;
-  }
-  return data;
-}
-
-/** Check for a saved login. @returns {Promise<{ enabled: boolean, user: object|null }>} */
+/**
+ * Set up Auth0 and finish a login if we just came back from the login page.
+ * @returns {Promise<{ enabled: boolean, user: object|null }>}
+ */
 export async function initAuth() {
   if (!authEnabled) return { enabled: false, user: null };
-  const session = readSession();
-  return { enabled: true, user: session ? session.user : null };
-}
 
-/** Log in with username + password. Resolves with the user, throws on a wrong password etc. */
-export async function loginWithPassword(username, password) {
-  const data = await postJson(`https://${domain}/oauth/token`, {
-    grant_type: 'http://auth0.com/oauth/grant-type/password-realm',
-    realm: connection,
-    username,
-    password,
-    audience,
-    scope: 'openid profile',
-    client_id: clientId,
+  // Create the client WITHOUT the automatic "already logged in?" check, so that
+  // a failing check can't stop the login / sign-up buttons from working.
+  client = new Auth0Client({
+    domain,
+    clientId,
+    cacheLocation: 'localstorage', // stay logged in across page reloads
+    authorizationParams: { redirect_uri: window.location.origin, audience },
   });
-  const user = toUser(data.id_token);
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({
-      accessToken: data.access_token,
-      expiresAt: Date.now() + data.expires_in * 1000,
-      user,
-    }),
-  );
-  return user;
+
+  // Coming back from the Auth0 page: either a login code or an error.
+  const params = new URLSearchParams(window.location.search);
+  let error = null;
+  const returningFromAuth0 = params.has('code') || params.has('error');
+  if (!returningFromAuth0) {
+    try {
+      await client.checkSession();
+    } catch (err) {
+      error = `session check failed (${err.error || err.message}). ` +
+        'Check "Allowed Web Origins" = http://localhost:5173 in the Auth0 app settings.';
+    }
+  }
+  if (params.has('error')) {
+    error = `${params.get('error')}: ${params.get('error_description') || ''}`;
+  } else if (params.has('code') && params.has('state')) {
+    try {
+      await client.handleRedirectCallback();
+    } catch (err) {
+      error = err.error_description || err.message;
+    }
+  }
+  if (params.has('error') || params.has('code')) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
+  const user = (await client.isAuthenticated()) ? await client.getUser() : null;
+  return { enabled: true, user, error };
 }
 
-/** Create an account, then log straight in. */
-export async function registerWithPassword(username, password) {
-  await postJson(`https://${domain}/dbconnections/signup`, {
-    client_id: clientId,
-    connection,
-    username,
-    password,
-  });
-  return loginWithPassword(username, password);
+function requireClient() {
+  if (!client) throw new Error('Auth0 is not set up yet: check the VITE_AUTH0_* values in .env');
+  return client;
 }
 
-/** Forget the login and reload so the app returns to the login page. */
-export function logout() {
-  try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
-  window.location.reload();
-}
+/** Go to the Auth0 login page (username + password). */
+export const login = () => requireClient().loginWithRedirect();
+
+/** Go straight to the Auth0 sign-up form. */
+export const signup = () =>
+  requireClient().loginWithRedirect({ authorizationParams: { screen_hint: 'signup' } });
+
+export const logout = () =>
+  client?.logout({ logoutParams: { returnTo: window.location.origin } });
 
 /** Access token for our server, or null if not logged in. Used by src/api/. */
 export async function getToken() {
-  const session = readSession();
-  return session ? session.accessToken : null;
+  if (!client || !(await client.isAuthenticated())) return null;
+  return client.getTokenSilently();
 }
