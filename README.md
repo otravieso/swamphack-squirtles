@@ -1,42 +1,26 @@
-# React gameplay conversion — Edgar branch
+# SwampHack Squirtles 🐢
 
-This archive contains **new or replacement files only**. No GitHub changes were made.
+An AI-powered psychological study adventure. Students upload their notes, a cute robot
+teacher turns them into lessons… and slowly stops wanting them to leave.
+Built for **SwampHacks**.
 
-## Copy files
+## Status
 
-Copy `client/src/GameApp.jsx` into the same path in your repository, replacing the old component.
-Copy all four `.jsx` files from `client/src/components/` into a new `client/src/components/` folder.
 | Part | Status | Where |
 |---|---|---|
 | Login: Auth0 username + password | ✅ done (needs Auth0 setup) | `client/src/auth/`, `server/src/auth/` |
 | Database: users + saved questions (Tiger Data PostgreSQL) | ✅ done (needs `DATABASE_URL`) | `server/src/db/` |
-| Gemini: notes → questions | ✅ done (needs `GEMINI_API_KEY`) | `server/src/gemini/` |
+| Gemini: notes / PDFs → questions | ✅ done (needs `GEMINI_API_KEY`) | `server/src/gemini/` |
 | Notes → Gemini → database | ✅ done | `server/src/services/studyPacks.js`, `POST /api/notes` |
-| Game (scenes, robot, UI) | ⬜ team | `client/src/game/` |
+| Game (React visual novel: robot, dialogue, choices, survival stats) | ✅ playable demo | `client/src/GameApp.jsx`, `client/src/game/` |
+| App screens: login, upload notes/PDF, saved sets → game | ✅ done | `client/src/App.jsx`, `client/src/components/` |
 | Art & audio | ⬜ team | `client/public/assets/` |
 | Hosting (Vultr + .study domain) | ⬜ later | `deploy/` |
 
-Keep these existing files unchanged:
-- `client/src/main.js`
-- `client/index.html`
-- `client/src/game/story.js`
-- `client/src/game/stats.js`
-- `client/src/game/questionProvider.js`
-- `client/src/game/game.css`
-- `client/vite.config.js`
-- backend, auth and database files
+## Getting started
 
-After testing the new React version, `client/src/game/game.js` (the old DOM-based engine) is unused and can be deleted. Don't delete it until you've confirmed the new game works.
+Requires **Node.js 22.13 or newer** (check with `node -v`; get the LTS from nodejs.org).
 
-## Run
-
-From the repository root:
-
-```bash
-npm run dev -w client
-```
-
-Open the Vite local URL. Add `?debug` to see survival stats.
 You also need the team's keys in `.env` (ask a teammate privately): `DATABASE_URL` (Tiger Data),
 the Auth0 values, and `GEMINI_API_KEY`.
 
@@ -48,51 +32,75 @@ cp .env.example .env        # Windows: copy .env.example .env
 npm run dev
 ```
 
-Open **http://localhost:5173** for a small test page: sign up, log in, paste notes or upload a PDF → generate questions with Gemini, and list saved sets.
+Open **http://localhost:5173**:
+
+1. **Log in / Sign up** (skipped when Auth0 isn't configured; everything is then saved as "guest").
+2. **Hand in your notes**: paste text, or choose a PDF / .txt / .md file → *Generate questions & play*.
+3. **Play**: the Professor asks the questions Gemini generated from your notes.
+4. **← My notes** returns to the home screen, where saved sets can be played again or deleted.
+
+Add `?debug` to the URL to see the hidden survival stats while playing.
 
 The server won't start without `DATABASE_URL`. The tables are created once with `node server/setup-db.js`
 (already done for the shared database; see `server/src/db/README.md`).
-Without Auth0 values, everything is saved under a "guest" user. Auth0 setup: **`server/src/auth/README.md`**.
+Auth0 setup: **`server/src/auth/README.md`**.
 
-`npm test` runs the tests. The database tests use a separate `test` schema in Tiger Data, never real game data.
+`npm test` runs all tests: server (notes/PDF glue + database; the database tests use a separate
+`test` schema in Tiger Data, never real game data) and client (question set → game adapter).
 
-## Test
+> ⚠️ **Never commit `.env`.** It's in `.gitignore`.
 
+## Project structure
+
+```
+client/                    Browser side (React + Vite)
+  src/main.js              Entry point: renders <App />
+  src/App.jsx              Screens: login → home (upload + saved sets) → game
+  src/components/          UploadNotes, SavedSets (app screens) + Robot, DialogueBox, ChoiceBox, GameOver (game)
+  src/GameApp.jsx          The game (visual novel engine)
+  src/game/                story.js (script as data), stats.js, questionProvider.js,
+                           questionSetAdapter.js (saved questions → game format), game.css
+  src/api/api.js           Calls to our server (attaches the login token); files.js = PDF/file helpers
+  src/auth/auth.js         Auth0 login / sign-up / logout
+  test/                    Client tests
+  public/assets/           Sprites, tilesets, sounds
+server/                    Backend (holds the secret keys)
+  src/routes/              API endpoints (see its README)
+  src/auth/                Auth0 token check + setup guide
+  src/db/                  Tiger Data PostgreSQL: users, question_sets, questions
+  src/gemini/              Gemini API: PDF → text, notes → questions
+  src/services/            Glue: notes/PDF → Gemini → database
+  test/                    Tests (database + notes/PDF glue)
+deploy/                    Hosting (Vultr + .study domain), later
+```
+
+## How the pieces connect
+
+```
+App.jsx ─ UploadNotes ─→ client/src/api ──(login token)──→ POST /api/notes → Gemini → database
+        └ SavedSets ───→ client/src/api ──────────────────→ GET /api/question-sets/:id
+        → questionSetAdapter (renames fields) → GameApp asks those questions
+```
+
+## Game notes
+
+- Edit the story in `client/src/game/story.js` (plain data: `scene`, `say`, `q`, `choice`, `end`).
+  `*text in asterisks*` renders as glitch text in the Professor's lines.
+- The story currently has **4** question spots; Gemini generates **10** per upload. Add more `q(...)` nodes to use them all
+  (after a set runs out, questions repeat rather than erroring).
+- `GameApp` accepts optional `script` and `hooks` props (`onAnswer`, `onChoice`, `onDeath`, `onEnd`).
+- `client/src/game/game.js` is the old DOM-based engine and is no longer used.
+
+### Manual game test checklist
 1. Advance dialogue, including skipping the typing animation.
 2. Answer a question correctly and incorrectly on separate playthroughs.
 3. Make a water choice, descend to the stairwell, and select cafeteria food.
 4. Reach the chapter completion screen, then restart.
 5. Try bad choices and wrong answers to verify death/restart.
-6. Test with `?debug` to verify hunger/thirst decay every two questions.
+6. With `?debug`, verify hunger/thirst decay every two questions.
 
-The story has four question nodes. The sample question provider has five unique questions; expanding the story beyond five question nodes requires additional questions or Gemini integration.
-```
-client/                Browser side (what the player sees)
-  src/game/            Game code: scenes, robot teacher, dialogue, question UI
-  src/api/api.js       Calls to our server (attaches the login token)
-  src/auth/auth.js     Auth0 login / sign-up / logout
-  public/assets/       Sprites, tilesets, sounds
-  index.html, src/main.js   Temporary test page (replace with the game)
-server/                Backend (holds the secret keys)
-  src/routes/          API endpoints (see its README)
-  src/auth/            Auth0 token check + setup guide
-  src/db/              Tiger Data PostgreSQL: users, question_sets, questions
-  src/gemini/          Gemini API: notes → questions
-  src/services/        Glue: notes → Gemini → database
-  test/                Tests (database + notes→Gemini glue)
-deploy/                Hosting (Vultr + .study domain), later
-```
+## Team workflow
 
-## Integration
-
-`GameApp` accepts optional `script` and `hooks` props. `hooks` supports `onAnswer`, `onChoice`, `onDeath`, and `onEnd`.
-The question provider still uses `getQuestion({difficulty, seen})` and `setQuestionProvider(...)`.
-```
-game → client/src/api ──(login token)──→ server/src/routes → server/src/auth (who is this?)
-                                                          → server/src/db   (save / load questions)
-                                                          → server/src/gemini (generate questions)
-```
-
-## Important
-
-Vite stays in the project as the development/build tool. React now renders and manages the entire gameplay UI. The code has not been browser-tested against your machine, so check the browser console if an error appears.
+- Work on a branch: `git checkout -b your-name/feature`
+- Commit small, push, open a Pull Request; a teammate merges it.
+- `git pull` before you start working.
