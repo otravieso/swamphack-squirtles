@@ -15,6 +15,8 @@ import {
   listQuestionSets,
   getQuestionSet,
   deleteQuestionSet,
+  replaceQuestions,
+  getNotesText,
 } from "../src/db/questionSets.js";
 
 // Sample questions used throughout the tests.
@@ -238,4 +240,72 @@ test("cannot save a set for a nonexistent user", async () => {
   );
 
   assert.equal(Number(result.rows[0].n), 0);
+});
+
+// Test 7: Notes are saved with a set (for "Play again").
+test("notes are saved and only the owner can read them", async () => {
+  const withNotes = await saveQuestionSet(
+    "auth0|alice",
+    { title: "Bio", questions: sampleQuestions, notesText: "Mitochondria make ATP." },
+    testDb
+  );
+  const withoutNotes = await saveQuestionSet(
+    "auth0|alice",
+    { title: "Old", questions: sampleQuestions },
+    testDb
+  );
+
+  assert.equal(await getNotesText("auth0|alice", withNotes.id, testDb), "Mitochondria make ATP.");
+  assert.equal(await getNotesText("auth0|bob", withNotes.id, testDb), null);
+  assert.equal(await getNotesText("auth0|alice", withoutNotes.id, testDb), null);
+
+  assert.equal(withNotes.hasNotes, true);
+  assert.equal(withoutNotes.hasNotes, false);
+
+  const list = await listQuestionSets("auth0|alice", testDb);
+  assert.deepEqual(list.map((s) => s.hasNotes).sort(), [false, true]);
+});
+
+// Test 8: Replacing questions keeps the set and swaps its questions.
+test("replaceQuestions swaps a set's questions in one step", async () => {
+  const saved = await saveQuestionSet(
+    "auth0|alice",
+    { title: "Bio", questions: sampleQuestions, notesText: "notes" },
+    testDb
+  );
+
+  const fresh = [
+    { question: "Fill in the blank: ATP is made in the _____.", options: ["mitochondria", "nucleus", "ribosome", "golgi"], answerIndex: 0 },
+    { question: "Osmosis moves water.", options: ["True", "False"], answerIndex: 0 },
+    { question: "Which organelle makes proteins?", options: ["Ribosome", "Nucleus", "Vacuole", "Golgi"], answerIndex: 0 },
+  ];
+
+  const updated = await replaceQuestions("auth0|alice", saved.id, fresh, testDb);
+
+  assert.equal(updated.id, saved.id);
+  assert.equal(updated.title, "Bio");
+  assert.deepEqual(updated.questions.map((q) => q.question), fresh.map((q) => q.question));
+
+  const result = await testDb.query("SELECT COUNT(*) AS n FROM test.questions");
+  assert.equal(Number(result.rows[0].n), 3, "old questions are gone");
+  assert.equal(await getNotesText("auth0|alice", saved.id, testDb), "notes", "notes are kept");
+});
+
+// Test 9: Replacing fails safely.
+test("replaceQuestions keeps old questions on bad input or the wrong user", async () => {
+  const saved = await saveQuestionSet(
+    "auth0|alice",
+    { title: "Bio", questions: sampleQuestions },
+    testDb
+  );
+
+  assert.equal(await replaceQuestions("auth0|bob", saved.id, sampleQuestions, testDb), null);
+
+  await assert.rejects(
+    () => replaceQuestions("auth0|alice", saved.id, [{ question: "Broken", options: ["A"], answerIndex: 0 }], testDb),
+    /options/
+  );
+
+  const kept = await getQuestionSet("auth0|alice", saved.id, testDb);
+  assert.deepEqual(kept.questions.map((q) => q.question), sampleQuestions.map((q) => q.question));
 });

@@ -2,7 +2,7 @@
 // so they run offline: no API key, and nothing touches the shared PostgreSQL database.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createStudyPackFromNotes, isUsableQuestion, MAX_NOTES_CHARS } from '../src/services/studyPacks.js';
+import { createStudyPackFromNotes, regenerateStudyPack, isUsableQuestion, MAX_NOTES_CHARS } from '../src/services/studyPacks.js';
 
 const goodQuestion = {
   question: 'Where does photosynthesis happen?',
@@ -165,4 +165,109 @@ test('PDF: very long documents are trimmed instead of failing', async () => {
 test('isUsableQuestion accepts the shape generateQuestions() returns', () => {
   assert.equal(isUsableQuestion(goodQuestion), true);
   assert.equal(isUsableQuestion({ ...goodQuestion, answerIndex: -1 }), false);
+});
+
+// ---- Saving notes and "Play again" (regenerate) ----
+
+test('the notes are saved with the set so it can be regenerated later', async () => {
+  const store = fakeStore();
+  await createStudyPackFromNotes('auth0|amy', { notes: '  Plants use chlorophyll.  ' }, { generate: async () => [goodQuestion], save: store.save });
+  assert.equal(store.saved[0].notesText, 'Plants use chlorophyll.');
+
+  const pdfStore = fakeStore();
+  await createStudyPackFromNotes(
+    'auth0|amy',
+    { notes: 'typed', file: { name: 'bio.pdf', mimeType: 'application/pdf', data: Buffer.from('%PDF').toString('base64') } },
+    { generate: async () => [goodQuestion], extract: async () => 'from the pdf', save: pdfStore.save }
+  );
+  assert.equal(pdfStore.saved[0].notesText, 'typed\n\nfrom the pdf', 'PDF text is saved, so the PDF never has to be read again');
+});
+
+/** A fake saved set plus fake database functions for regenerateStudyPack. */
+function fakeSavedSet({ notes = 'Plants use chlorophyll.' } = {}) {
+  const set = { id: 5, title: 'Bio', questions: [{ ...goodQuestion, id: 1 }] };
+  const calls = { replaced: [] };
+  return {
+    set,
+    calls,
+    deps: {
+      loadSet: async (userId, id) => (userId === 'auth0|amy' && id === 5 ? set : null),
+      loadNotes: async (userId, id) => (userId === 'auth0|amy' && id === 5 ? notes : null),
+      replace: async (userId, id, questions) => {
+        calls.replaced.push(questions);
+        return { ...set, questions };
+      },
+    },
+  };
+}
+
+test('regenerate: new questions from the saved notes replace the old ones', async () => {
+  const { deps, calls } = fakeSavedSet();
+  let received;
+  const fresh = { ...goodQuestion, question: 'What pigment absorbs light?' };
+  const result = await regenerateStudyPack('auth0|amy', 5, {
+    ...deps,
+    generate: async (notes, options) => {
+      received = { notes, options };
+      return [fresh, { ...goodQuestion, answerIndex: 9 }];
+    },
+  });
+  assert.equal(received.notes, 'Plants use chlorophyll.');
+  assert.deepEqual(received.options.avoid, [goodQuestion.question], 'Gemini is told not to repeat the old questions');
+  assert.equal(calls.replaced.length, 1);
+  assert.deepEqual(result.questions, [fresh], 'bad questions are dropped');
+  assert.equal(result.id, 5, 'same set, same id');
+});
+
+test('regenerate: if Gemini fails, the old questions are kept', async () => {
+  const { deps, calls } = fakeSavedSet();
+  await assert.rejects(
+    regenerateStudyPack('auth0|amy', 5, { ...deps, generate: async () => { throw new Error('boom'); } }),
+    (err) => err.status === 502
+  );
+  await assert.rejects(
+    regenerateStudyPack('auth0|amy', 5, { ...deps, generate: async () => { throw new Error('429 quota exceeded'); } }),
+    (err) => err.status === 503
+  );
+  await assert.rejects(
+    regenerateStudyPack('auth0|amy', 5, { ...deps, generate: async () => [] }),
+    (err) => err.status === 502
+  );
+  assert.equal(calls.replaced.length, 0, 'replace was never called');
+});
+
+test("regenerate: someone else's set, or a missing one, is not found", async () => {
+  const { deps, calls } = fakeSavedSet();
+  const generate = async () => [goodQuestion];
+  await assert.rejects(regenerateStudyPack('auth0|bob', 5, { ...deps, generate }), (err) => err.status === 404);
+  await assert.rejects(regenerateStudyPack('auth0|amy', 99, { ...deps, generate }), (err) => err.status === 404);
+  await assert.rejects(regenerateStudyPack('auth0|amy', NaN, { ...deps, generate }), (err) => err.status === 404);
+  assert.equal(calls.replaced.length, 0);
+});
+
+test('regenerate: sets saved before notes were stored explain what to do', async () => {
+  const { deps } = fakeSavedSet({ notes: null });
+  await assert.rejects(
+    regenerateStudyPack('auth0|amy', 5, { ...deps, generate: async () => [goodQuestion] }),
+    (err) => err.status === 409 && /Upload the notes again/.test(err.message)
+  );
+});
+
+test('regenerate: a double click only starts one Gemini call', async () => {
+  const { deps } = fakeSavedSet();
+  let calls = 0;
+  let release;
+  const generate = () => { calls++; return new Promise((resolve) => { release = () => resolve([goodQuestion]); }); };
+  const first = regenerateStudyPack('auth0|amy', 5, { ...deps, generate });
+  await new Promise((r) => setImmediate(r));
+  await assert.rejects(regenerateStudyPack('auth0|amy', 5, { ...deps, generate }), (err) => err.status === 409);
+  release();
+  await first;
+  assert.equal(calls, 1);
+  // Once it finishes, it can be regenerated again.
+  const again = regenerateStudyPack('auth0|amy', 5, { ...deps, generate });
+  await new Promise((r) => setImmediate(r));
+  release();
+  await again;
+  assert.equal(calls, 2);
 });

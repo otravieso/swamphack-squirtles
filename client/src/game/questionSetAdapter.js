@@ -29,7 +29,29 @@ export function makeQuestionSetProvider(questionSet) {
     pool.find((q) => !seen.includes(q.id)) ?? pool[Math.floor(Math.random() * pool.length)];
 }
 
+// The set the game is asking from, and a newer one waiting for the next run.
+let current = null;
+let pending = null;
+
 /** Make the game ask questions from this saved set. Call before showing <GameApp />. */
 export function loadQuestionSetIntoGame(questionSet) {
-  setQuestionProvider(makeQuestionSetProvider(questionSet));
+  current = makeQuestionSetProvider(questionSet);
+  pending = null;
+  setQuestionProvider(async (ctx = {}) => {
+    // A run's first question has nothing seen yet: that's when a waiting set takes over,
+    // so new questions never get mixed into a run that's already going.
+    if (pending && !(ctx.seen?.length)) {
+      current = pending;
+      pending = null;
+    }
+    return current(ctx);
+  });
+}
+
+/**
+ * "Play again": use this (regenerated) set starting with the next run's first question.
+ * Call after loadQuestionSetIntoGame().
+ */
+export function queueQuestionSetForNextRun(questionSet) {
+  pending = makeQuestionSetProvider(questionSet);
 }

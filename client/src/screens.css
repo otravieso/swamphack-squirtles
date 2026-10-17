@@ -61,3 +61,14 @@
 
 /* "Back to my notes" button floating over the game */
 .back { position: fixed; top: 12px; right: 14px; z-index: 10; }
+
+/* "Play again" note: new questions being written / ready */
+.regen {
+  position: fixed; top: 64px; right: 14px; z-index: 10; margin: 0;
+  max-width: 260px; padding: 8px 14px;
+  font: 700 14px Quicksand, sans-serif; color: #5a2a45;
+  background: #fff8fb; border: 3px solid #ff8fbd; border-radius: 14px;
+}
+.regen-working { opacity: 0.9; }
+.regen-ready { background: #bff2dc; border-color: #4fc9b4; }
+.regen-failed { border-color: #d0506f; }

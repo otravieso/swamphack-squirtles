@@ -17,11 +17,14 @@ We never store user passwords in PostgreSQL.
 
 ```text
 users              id (Auth0 user ID) · username · created_at · last_login
-  └─ question_sets   id · user_id · title · source_files · created_at
+  └─ question_sets   id · user_id · title · source_files · notes_text · created_at
        └─ questions  id · set_id · position · question · options (JSONB)
                      answer_index · explanation · topic
                      difficulty (1-5) · source_quote
 ```
+
+`notes_text` keeps the notes (typed + text read from PDFs) a set was made from,
+so "Play again" can generate new questions. It's null for sets made before it existed.
 
 Deleting a user deletes their question sets.
 Deleting a question set deletes its questions.
@@ -33,7 +36,9 @@ import {
   saveQuestionSet,
   listQuestionSets,
   getQuestionSet,
-  deleteQuestionSet
+  deleteQuestionSet,
+  replaceQuestions,   // swap a set's questions (one transaction)
+  getNotesText        // the notes a set was made from, or null
 } from '../db/questionSets.js';
 
 // After Gemini generates questions:
@@ -83,8 +88,11 @@ Use verified TLS certificates for production connections.
 From the project root:
 
 ```bash
-node server/setup-db.js
+node server/setup-db.js          # real tables
+node server/setup-db.js --test   # the "test" schema used by npm test
 ```
+
+Safe to run again: it only adds what's missing (e.g. the `notes_text` column).
 
 ## Starting the Backend
 
