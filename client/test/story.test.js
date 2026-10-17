@@ -1,6 +1,7 @@
 // Checks the story script's structure and plays it through with different decisions,
-// using the real stats rules (same order of effects as GameApp: choice fx first, then its lines;
-// a wrong answer costs 1 intellect after the Professor's reaction).
+// using the real stats rules and the same order as GameApp:
+//   choice:       stat change -> that choice's narration -> THEN death check
+//   wrong answer: Professor's reaction -> intellect -1 + "Correct answer" explanation -> THEN death check
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { story } from '../src/game/story.js';
@@ -16,21 +17,25 @@ const STAT_KEYS = ['intelligence', 'health', 'hunger', 'thirst'];
  */
 function play({ pick = () => 0, answer = () => true } = {}) {
   const stats = new Stats();
+  const shown = []; // every line displayed, in order
   let choiceNo = 0;
   let questionNo = 0;
   const run = (nodes) => {
     for (const node of nodes) {
-      if (node.t === 'choice') {
+      if (node.t === 'say') {
+        shown.push(node.text);
+      } else if (node.t === 'choice') {
         const option = node.options[pick(choiceNo++, node.options)];
         stats.apply(option.fx);
-        if (stats.dead) return 'died';
         if (run(option.then ?? []) === 'died') return 'died';
+        if (stats.dead) return 'died'; // death check AFTER the choice's narration
       } else if (node.t === 'q') {
         const correct = answer(questionNo++);
+        shown.push('[question]');
         if (run(correct ? node.right : node.wrong) === 'died') return 'died';
-        if (!correct) stats.apply({ intelligence: -1 });
+        if (!correct) { stats.apply({ intelligence: -1 }); shown.push('[Correct answer: …]'); }
+        if (stats.dead) return 'died'; // death check AFTER the reaction + explanation
         stats.tick();
-        if (stats.dead) return 'died';
       } else if (node.t === 'end') {
         return 'completed';
       }
@@ -38,7 +43,7 @@ function play({ pick = () => 0, answer = () => true } = {}) {
     return 'completed';
   };
   const outcome = run(story);
-  return { outcome, cause: stats.dead, stats: stats.snapshot(), questionsAsked: questionNo };
+  return { outcome, cause: stats.dead, stats: stats.snapshot(), questionsAsked: questionNo, lastShown: shown.at(-1) };
 }
 
 // Option indexes by label text, so tests read like decisions.
@@ -94,18 +99,27 @@ test('health can be lost: water bottle, running the stairs, egg salad, robo fuel
   const r = play({ pick: byLabel('Go to the window', 'Run down', 'EggSalad', 'Robo fuel'), answer: () => true });
   assert.equal(r.outcome, 'died');
   assert.equal(r.cause, 'health');
+  assert.ok(r.lastShown.startsWith("It's dark and thick."), 'robo fuel narration shown before game over: ' + r.lastShown);
 });
 
-test('thirst can be lost: licking the desk, the railing, lasagna, the nugget drink', () => {
-  const r = play({ pick: byLabel('You lick', 'Use the broken railing', 'Lasagna', 'Suspicious nugget'), answer: () => true });
+test('thirst can be lost: licking the desk, the railing, then lasagna (thirst 3 -> 0)', () => {
+  const r = play({ pick: byLabel('You lick', 'Use the broken railing', 'Lasagna'), answer: () => true });
   assert.equal(r.outcome, 'died');
   assert.equal(r.cause, 'thirst');
+  assert.ok(r.lastShown.startsWith('Oh, you think yourself somewhat of a builder?'), 'lasagna narration shown before game over: ' + r.lastShown);
+});
+
+test('thirst can also run out at the drinks machine (the nugget drink)', () => {
+  const r = play({ pick: byLabel('You lick', 'Use the broken railing', 'Canned beans', 'Suspicious nugget'), answer: () => true });
+  assert.equal(r.cause, 'thirst');
+  assert.ok(r.lastShown.startsWith('A single nugget is dispensed.'), 'nugget narration shown before game over: ' + r.lastShown);
 });
 
 test('hunger can be lost: the window ledge plus the egg salad', () => {
   const r = play({ pick: byLabel('Get to the sink', 'Climb out the window', 'EggSalad'), answer: () => true });
   assert.equal(r.outcome, 'died');
   assert.equal(r.cause, 'hunger');
+  assert.ok(r.lastShown.startsWith('You died. Or rather'), 'egg salad narration shown before game over: ' + r.lastShown);
 });
 
 test('intellect is lost by wrong answers: 5 wrong answers ends the game', () => {
@@ -113,6 +127,15 @@ test('intellect is lost by wrong answers: 5 wrong answers ends the game', () => 
   assert.equal(r.outcome, 'died');
   assert.equal(r.cause, 'intelligence');
   assert.equal(r.questionsAsked, 5);
+  assert.equal(r.lastShown, '[Correct answer: …]', 'reaction + explanation shown before game over');
+});
+
+test('stats never change on their own: only decisions with effects and wrong answers move them', () => {
+  const neutral = play({ pick: SAFE, answer: () => true });
+  assert.deepEqual([neutral.stats.intelligence, neutral.stats.health, neutral.stats.hunger, neutral.stats.thirst],
+    [START.intelligence, START.health, START.hunger, START.thirst]);
+  const oneWrong = play({ pick: SAFE, answer: (n) => n !== 0 });
+  assert.equal(oneWrong.stats.intelligence, START.intelligence - 1);
 });
 
 test('a few mistakes still finish the chapter with a lower score', () => {

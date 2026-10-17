@@ -102,6 +102,11 @@ App.jsx ─ UploadNotes ─→ client/src/api ──(login token)──→ POST 
 Any stat reaching 0 ends the game. There is no timer: stats only change through the script's decisions and answers
 (`DECAY_EVERY = 0` in `stats.js`). Add `?debug` to the URL to see the stats while playing.
 
+**Order when a stat runs out** (handled in `GameApp.jsx` with a `_checkDeath` step):
+1. **Decision:** the stat changes → that decision's narration from the script is shown → *then* the game-over screen.
+2. **Wrong answer:** the Professor's reaction → intellect −1 and the "Correct answer: …" explanation → *then* game over.
+3. The game-over screen says **"You died"** and **"Cause of death: health / thirst / hunger / intelligence"**.
+
 ### Final score (`client/src/game/score.js`, logic only, no UI yet)
 
 `computeScore(stats, { completed })`: **100 per intellect point** (the most important), 40 per health, 30 per hunger,

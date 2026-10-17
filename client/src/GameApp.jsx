@@ -8,11 +8,12 @@ import { Stats } from './game/stats.js';
 import { getQuestion } from './game/questionProvider.js';
 import './game/game.css';
 
+// Shown on the game-over screen so the player knows what they died of.
 const DEATHS = {
-  intelligence: 'Your mind goes quiet. The Professor smiles. "Lesson over."',
-  health: 'Your body gives out. The Professor sighs. "Fragile things."',
-  thirst: 'Your throat closes. The Professor hums. "Should have asked for water."',
-  hunger: 'Your stomach finally stops asking. The Professor says, "Hm. Efficient."',
+  intelligence: 'Cause of death: intelligence',
+  health: 'Cause of death: health',
+  thirst: 'Cause of death: thirst',
+  hunger: 'Cause of death: hunger',
 };
 
 const initialView = () => ({ place: '', aggro: 0, dialogue: null, choices: null, ending: null, stats: null });
@@ -34,6 +35,14 @@ export default function GameApp({ script = story, hooks = {} }) {
     publish({ choices: null, ending: { title, message }, stats: game.stats.snapshot() });
     if (title === 'Chapter complete') hooksRef.current.onEnd?.({ stats: game.stats.snapshot() });
     else if (title === 'You died') hooksRef.current.onDeath?.({ cause: game.stats.dead, stats: game.stats.snapshot() });
+  }, [publish]);
+
+  // Change stats but don't end the game yet: the outcome narration plays first,
+  // then a { t: '_checkDeath' } step ends the game if a stat reached 0.
+  const changeStats = useCallback((effects = {}) => {
+    const game = runtime.current;
+    game.stats.apply(effects);
+    publish({ stats: game.stats.snapshot() });
   }, [publish]);
 
   const apply = useCallback((effects = {}) => {
@@ -78,10 +87,12 @@ export default function GameApp({ script = story, hooks = {} }) {
           publish({ dialogue: { t: 'say', who: 'teacher', text: question.prompt }, choices: null });
           return;
         } else if (node.t === '_feedback') {
-          if (!apply({ intelligence: -1 })) return;
+          changeStats({ intelligence: -1 }); // game over (if any) comes after this text, via _checkDeath
           game.mode = 'dialogue';
           publish({ dialogue: { t: 'say', who: 'narrator', text: node.text }, choices: null });
           return;
+        } else if (node.t === '_checkDeath') {
+          if (!apply({})) return; // a stat hit 0 during the decision/answer above -> game over now
         } else if (node.t === '_tick') {
           game.stats.tick();
           if (!apply({})) return;
@@ -100,7 +111,7 @@ export default function GameApp({ script = story, hooks = {} }) {
         finish('Gameplay error', error?.message ?? 'Something went wrong.');
       }
     }
-  }, [apply, finish, publish]);
+  }, [apply, changeStats, finish, publish]);
 
   const restart = useCallback(() => {
     generation.current += 1;
@@ -136,21 +147,21 @@ export default function GameApp({ script = story, hooks = {} }) {
       if (!option) return;
       hooksRef.current.onChoice?.({ label: option.label, fx: option.fx });
       publish({ choices: null });
-      if (!apply(option.fx)) return;
-      game.queue.unshift(...(option.then ?? []));
+      changeStats(option.fx);
+      game.queue.unshift(...(option.then ?? []), { t: '_checkDeath' });
     } else if (game.mode === 'question') {
       const { question, node } = game.currentQuestion;
       const correct = index === question.correctIndex;
       hooksRef.current.onAnswer?.({ question, correct, choiceIndex: index });
       const branch = correct ? node.right : node.wrong;
       const after = correct ? [] : [{ t: '_feedback', text: `Correct answer: ${question.choices[question.correctIndex]}.${question.explanation ? ' ' + question.explanation : ''}` }];
-      game.queue.unshift(...branch, ...after, { t: '_tick' });
+      game.queue.unshift(...branch, ...after, { t: '_checkDeath' }, { t: '_tick' });
       game.currentQuestion = null;
       publish({ choices: null });
     } else return;
     game.mode = 'ready';
     void advance();
-  }, [view.choices, apply, advance, publish]);
+  }, [view.choices, changeStats, advance, publish]);
 
   const debug = new URLSearchParams(window.location.search).has('debug');
   const choices = view.choices;
