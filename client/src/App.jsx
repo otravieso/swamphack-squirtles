@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { authEnabled, initAuth, login, logout, signup } from './auth/auth.js';
+import { authEnabled, initAuth, logout } from './auth/auth.js';
 import { loadQuestionSetIntoGame } from './game/questionSetAdapter.js';
+import LoginPage from './components/LoginPage.jsx';
 import UploadNotes from './components/UploadNotes.jsx';
 import SavedSets from './components/SavedSets.jsx';
 import GameApp from './GameApp.jsx';
@@ -29,17 +30,7 @@ export default function App() {
 
   // Logged out (skipped entirely when Auth0 isn't configured)
   if (authEnabled && !auth.user) {
-    return (
-      <div className="page">
-        <div className="card center">
-          <h1>SwampHack Squirtles</h1>
-          <p>Learning has never been this fun! ★</p>
-          {auth.error && <p className="error">{auth.error}</p>}
-          <button type="button" className="primary" onClick={() => signup()}>Sign up</button>
-          <button type="button" onClick={() => login()}>Log in</button>
-        </div>
-      </div>
-    );
+    return <LoginPage onAuthed={(user) => setAuth({ loading: false, user, error: null })} />;
   }
 
   // Playing
