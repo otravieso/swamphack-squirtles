@@ -16,8 +16,8 @@ export async function extractNotesText({ mimeType, data }) {
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
   const response = await ai.models.generateContent({
-    // Same model generateQuestions() uses; override with GEMINI_MODEL in .env if needed.
-    model: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
+    // Keep in sync with the model in generateQuestions.js.
+    model: 'gemini-3.8-flash',
     contents: [
       {
         role: 'user',

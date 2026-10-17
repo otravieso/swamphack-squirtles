@@ -29,10 +29,13 @@ function httpError(status, message) {
 /** Turn a Gemini/SDK failure into a clean error for the game. */
 function geminiError(err, action) {
   console.error(`Gemini error while ${action}:`, err);
-  const busy = /429|quota|rate/i.test(String(err?.message ?? err));
+  const raw = String(err?.message ?? err);
+  const busy = /429|quota|rate/i.test(raw);
+  // Include Gemini's own reason (trimmed) so problems can be diagnosed from the game/test page.
+  const reason = raw.replace(/\s+/g, ' ').slice(0, 300);
   return busy
     ? httpError(503, 'Gemini is busy (rate limit). Wait a moment and try again.')
-    : httpError(502, `Gemini could not ${action}. Try again.`);
+    : httpError(502, `Gemini could not ${action}. Reason: ${reason}`);
 }
 
 /** True if a question from Gemini has everything the game needs. */
