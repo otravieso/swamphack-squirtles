@@ -14,7 +14,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
-    "express-oauth2-jwt-bearer": "^1.6.1"
+    "express-oauth2-jwt-bearer": "^1.6.1",
+    "pg": "^8.23.1"
   },
   "engines": {
     "node": ">=22.13"
