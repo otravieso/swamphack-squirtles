@@ -5,10 +5,14 @@ import { config, features } from './config.js';
 import { testConnection } from './db/db.js';
 import meRouter from './routes/me.js';
 import questionSetsRouter from './routes/questionSets.js';
+import notesRouter from './routes/notes.js';
 
 const app = express();
 
 app.use(cors({ origin: config.clientOrigin }));
+// /api/notes accepts PDF uploads (base64 inside JSON), so it gets a bigger limit.
+// It must come before the general 2 MB parser below.
+app.use('/api/notes', express.json({ limit: '25mb' }));
 app.use(express.json({ limit: '2mb' }));
 
 // Health check
@@ -19,6 +23,7 @@ app.get('/api/health', (_req, res) => {
 // API routes
 app.use('/api/me', meRouter);
 app.use('/api/question-sets', questionSetsRouter);
+app.use('/api/notes', notesRouter);
 
 // Central error handler
 app.use((err, _req, res, _next) => {
@@ -47,6 +52,9 @@ async function startServer() {
       console.log('Database: Tiger Data PostgreSQL');
       console.log(
         `Auth0: ${features.auth0 ? 'ON' : 'OFF (guest mode)'}`
+      );
+      console.log(
+        `Gemini: ${features.gemini ? 'ON' : 'OFF (add GEMINI_API_KEY to .env)'}`
       );
     });
   } catch (error) {
