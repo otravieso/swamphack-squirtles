@@ -38,10 +38,14 @@ export function isUsableQuestion(q) {
  * Generate questions from a user's notes and save them as a new question set.
  * @param {string} userId
  * @param {{ title?: string, notes: string, sourceFiles?: string[] }} input
- * @param {{ generate?: (notes: string) => Promise<object[]> }} [deps]  for tests
+ * @param {{ generate?: Function, save?: Function }} [deps]  swapped for fakes in tests
  * @returns the saved set: { id, title, sourceFiles, createdAt, questions[] }
  */
-export async function createStudyPackFromNotes(userId, input, { generate = defaultGenerate, db } = {}) {
+export async function createStudyPackFromNotes(
+  userId,
+  input,
+  { generate = defaultGenerate, save = saveQuestionSet } = {}
+) {
   const notes = typeof input?.notes === 'string' ? input.notes.trim() : '';
   const title = (typeof input?.title === 'string' && input.title.trim()) || 'Untitled notes';
   const sourceFiles = Array.isArray(input?.sourceFiles)
@@ -68,5 +72,5 @@ export async function createStudyPackFromNotes(userId, input, { generate = defau
   const questions = (Array.isArray(generated) ? generated : []).filter(isUsableQuestion);
   if (questions.length === 0) throw httpError(502, 'Gemini returned no usable questions. Try again.');
 
-  return saveQuestionSet(userId, { title, sourceFiles, questions }, db);
+  return await save(userId, { title, sourceFiles, questions });
 }

@@ -1,20 +1,35 @@
-// Users table. Rows are created automatically the first time someone logs in.
-import { getDb } from './db.js';
 
-/**
- * Create the user if new, otherwise refresh username and last_login.
- * @param {{ id: string, username?: string|null }} user
- */
-export function upsertUser({ id, username = null }, db = getDb()) {
-  db.prepare(
-    `INSERT INTO users (id, username) VALUES (?, ?)
-     ON CONFLICT(id) DO UPDATE SET
-       username   = COALESCE(excluded.username, users.username),
-       last_login = datetime('now')`
-  ).run(id, username);
-  return getUser(id, db);
+import { getDb } from "./db.js";
+
+// Create a user when they first log in.
+// Update their username and last login on future visits.
+export async function upsertUser({ id, username }, db = getDb()) {
+  const result = await db.query(
+    `
+    INSERT INTO users (id, username)
+    VALUES ($1, $2)
+    ON CONFLICT (id)
+    DO UPDATE SET
+      username = COALESCE(EXCLUDED.username, users.username),
+      last_login = NOW()
+    RETURNING id, username, created_at, last_login
+    `,
+    [id, username ?? null]
+  );
+
+  return result.rows[0];
 }
 
-export function getUser(id, db = getDb()) {
-  return db.prepare('SELECT id, username, created_at, last_login FROM users WHERE id = ?').get(id) ?? null;
+// Find a user by their Auth0 ID.
+export async function getUser(id, db = getDb()) {
+  const result = await db.query(
+    `
+    SELECT id, username, created_at, last_login
+    FROM users
+    WHERE id = $1
+    `,
+    [id]
+  );
+
+  return result.rows[0] ?? null;
 }
