@@ -8,11 +8,6 @@ node_modules/
 
 # Build output
 dist/
-client/dist/
-
-# Server runtime data (saved progress, uploaded notes)
-server/data/*
-!server/data/.gitkeep
 
 # Logs
 *.log
@@ -22,6 +17,4 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 desktop.ini
-.vscode/*
-!.vscode/extensions.json
 .idea/
