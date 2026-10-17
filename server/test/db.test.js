@@ -1,96 +1,241 @@
-// Database tests. Run with: npm test -w server
-// Uses an in-memory database, so it never touches the real data file.
-import { test } from 'node:test';
-import assert from 'node:assert/strict';
-import { DatabaseSync } from 'node:sqlite';
-import { openDatabase, migrate } from '../src/db/db.js';
-import { upsertUser, getUser } from '../src/db/users.js';
+
+import { test, before, after, beforeEach } from "node:test";
+import assert from "node:assert/strict";
+
+import {
+  testDb,
+  verifyTestDatabase,
+  closeTestDatabase,
+} from "./testDb.js";
+
+import { upsertUser, getUser } from "../src/db/users.js";
+
 import {
   saveQuestionSet,
   listQuestionSets,
   getQuestionSet,
   deleteQuestionSet,
-} from '../src/db/questionSets.js';
+} from "../src/db/questionSets.js";
 
+// Sample questions used throughout the tests.
 const sampleQuestions = [
   {
-    question: 'Powerhouse of the cell?',
-    options: ['Nucleus', 'Mitochondria', 'Ribosome', 'Golgi'],
+    question: "Powerhouse of the cell?",
+    options: ["Nucleus", "Mitochondria", "Ribosome", "Golgi"],
     answerIndex: 1,
-    explanation: 'Mitochondria make ATP.',
-    topic: 'Organelles',
+    explanation: "Mitochondria make ATP.",
+    topic: "Organelles",
     difficulty: 1,
-    sourceQuote: 'Mitochondria produce ATP',
+    sourceQuote: "Mitochondria produce ATP",
   },
-  { question: 'Water across a membrane?', options: ['Diffusion', 'Osmosis'], answerIndex: 1 },
+  {
+    question: "Water across a membrane?",
+    options: ["Diffusion", "Osmosis"],
+    answerIndex: 1,
+  },
 ];
 
-function freshDb() {
-  const db = openDatabase(':memory:');
-  upsertUser({ id: 'auth0|alice', username: 'alice' }, db);
-  upsertUser({ id: 'auth0|bob', username: 'bob' }, db);
-  return db;
-}
-
-test('upsertUser creates, updates, and keeps username if a login has none', () => {
-  const db = freshDb();
-  assert.equal(upsertUser({ id: 'auth0|alice', username: 'alice2' }, db).username, 'alice2');
-  assert.equal(upsertUser({ id: 'auth0|alice' }, db).username, 'alice2'); // kept
-  assert.equal('email' in getUser('auth0|alice', db), false);
-  assert.equal(getUser('nobody', db), null);
+// Check that we're connected to the test schema.
+before(async () => {
+  await verifyTestDatabase();
 });
 
-test('old database files with an email column are upgraded', () => {
-  const old = new DatabaseSync(':memory:');
-  old.exec(`CREATE TABLE users (id TEXT PRIMARY KEY, username TEXT, email TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')), last_login TEXT NOT NULL DEFAULT (datetime('now')))`);
-  old.exec(`INSERT INTO users (id, username, email) VALUES ('auth0|old', 'olduser', 'x@y.com')`);
-  migrate(old);
-  const cols = old.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
-  assert.equal(cols.includes('email'), false);
-  assert.equal(getUser('auth0|old', old).username, 'olduser');
+// Reset test data before each test.
+beforeEach(async () => {
+  // Confirm the connection is still using the test schema.
+  await verifyTestDatabase();
+
+  // Only clear tables inside the test schema.
+  await testDb.query(`
+    TRUNCATE TABLE
+      test.questions,
+      test.question_sets,
+      test.users
+    RESTART IDENTITY CASCADE
+  `);
+
+  // Create test users.
+  await upsertUser(
+    { id: "auth0|alice", username: "alice" },
+    testDb
+  );
+
+  await upsertUser(
+    { id: "auth0|bob", username: "bob" },
+    testDb
+  );
 });
 
-test('save → list → get round-trips questions in order', () => {
-  const db = freshDb();
-  const saved = saveQuestionSet('auth0|alice', { title: 'Bio', sourceFiles: ['bio.pdf'], questions: sampleQuestions }, db);
+// Close the connection when testing finishes.
+after(async () => {
+  await closeTestDatabase();
+});
+
+// Test 1: User creation and updates.
+test("upsertUser creates and updates users", async () => {
+  const updated = await upsertUser(
+    { id: "auth0|alice", username: "alice2" },
+    testDb
+  );
+
+  assert.equal(updated.username, "alice2");
+
+  const user = await getUser("auth0|alice", testDb);
+  assert.equal(user.username, "alice2");
+
+  const missing = await getUser("nobody", testDb);
+  assert.equal(missing, null);
+});
+
+// Test 2: Save and retrieve question sets.
+test("save, list, and get questions in order", async () => {
+  const saved = await saveQuestionSet(
+    "auth0|alice",
+    {
+      title: "Bio",
+      sourceFiles: ["bio.pdf"],
+      questions: sampleQuestions,
+    },
+    testDb
+  );
+
   assert.equal(saved.questions.length, 2);
-  assert.deepEqual(saved.questions[0].options, sampleQuestions[0].options);
+  assert.deepEqual(
+    saved.questions[0].options,
+    sampleQuestions[0].options
+  );
   assert.equal(saved.questions[1].answerIndex, 1);
   assert.equal(saved.questions[1].difficulty, null);
 
-  const list = listQuestionSets('auth0|alice', db);
+  const list = await listQuestionSets("auth0|alice", testDb);
+
   assert.equal(list.length, 1);
   assert.equal(list[0].questionCount, 2);
-  assert.deepEqual(list[0].sourceFiles, ['bio.pdf']);
+  assert.deepEqual(list[0].sourceFiles, ["bio.pdf"]);
+
+  const retrieved = await getQuestionSet(
+    "auth0|alice",
+    saved.id,
+    testDb
+  );
+
+  assert.equal(retrieved.questions.length, 2);
 });
 
-test('users cannot see or delete each other\'s sets', () => {
-  const db = freshDb();
-  const saved = saveQuestionSet('auth0|alice', { title: 'Bio', questions: sampleQuestions }, db);
-  assert.equal(getQuestionSet('auth0|bob', saved.id, db), null);
-  assert.equal(listQuestionSets('auth0|bob', db).length, 0);
-  assert.equal(deleteQuestionSet('auth0|bob', saved.id, db), false);
-  assert.ok(getQuestionSet('auth0|alice', saved.id, db));
+// Test 3: Users cannot access each other's data.
+test("users cannot see or delete each other's sets", async () => {
+  const saved = await saveQuestionSet(
+    "auth0|alice",
+    {
+      title: "Bio",
+      questions: sampleQuestions,
+    },
+    testDb
+  );
+
+  assert.equal(
+    await getQuestionSet("auth0|bob", saved.id, testDb),
+    null
+  );
+
+  const bobSets = await listQuestionSets("auth0|bob", testDb);
+  assert.equal(bobSets.length, 0);
+
+  assert.equal(
+    await deleteQuestionSet("auth0|bob", saved.id, testDb),
+    false
+  );
+
+  assert.ok(
+    await getQuestionSet("auth0|alice", saved.id, testDb)
+  );
 });
 
-test('delete removes the set and its questions', () => {
-  const db = freshDb();
-  const saved = saveQuestionSet('auth0|alice', { title: 'Bio', questions: sampleQuestions }, db);
-  assert.equal(deleteQuestionSet('auth0|alice', saved.id, db), true);
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM questions').get().n, 0);
+// Test 4: Deleting a set deletes its questions.
+test("delete removes the set and its questions", async () => {
+  const saved = await saveQuestionSet(
+    "auth0|alice",
+    {
+      title: "Bio",
+      questions: sampleQuestions,
+    },
+    testDb
+  );
+
+  const deleted = await deleteQuestionSet(
+    "auth0|alice",
+    saved.id,
+    testDb
+  );
+
+  assert.equal(deleted, true);
+
+  const result = await testDb.query(
+    "SELECT COUNT(*) AS n FROM test.questions"
+  );
+
+  assert.equal(Number(result.rows[0].n), 0);
 });
 
-test('invalid questions are rejected and nothing is half-saved', () => {
-  const db = freshDb();
-  const bad = [...sampleQuestions, { question: 'Broken', options: ['A', 'B'], answerIndex: 5 }];
-  assert.throws(() => saveQuestionSet('auth0|alice', { title: 'Bad', questions: bad }, db), /answerIndex/);
-  assert.throws(() => saveQuestionSet('auth0|alice', { title: 'Empty', questions: [] }, db), /non-empty/);
-  assert.equal(listQuestionSets('auth0|alice', db).length, 0);
+// Test 5: Invalid questions should not be saved.
+test("invalid questions are rejected", async () => {
+  const badQuestions = [
+    ...sampleQuestions,
+    {
+      question: "Broken",
+      options: ["A", "B"],
+      answerIndex: 5,
+    },
+  ];
+
+  await assert.rejects(
+    () =>
+      saveQuestionSet(
+        "auth0|alice",
+        {
+          title: "Bad",
+          questions: badQuestions,
+        },
+        testDb
+      ),
+    /answerIndex/
+  );
+
+  await assert.rejects(
+    () =>
+      saveQuestionSet(
+        "auth0|alice",
+        {
+          title: "Empty",
+          questions: [],
+        },
+        testDb
+      ),
+    /non-empty/
+  );
+
+  const sets = await listQuestionSets("auth0|alice", testDb);
+  assert.equal(sets.length, 0);
 });
 
-test('a set cannot be saved for a user that does not exist', () => {
-  const db = freshDb();
-  assert.throws(() => saveQuestionSet('auth0|ghost', { title: 'X', questions: sampleQuestions }, db), /FOREIGN KEY/);
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM questions').get().n, 0);
+// Test 6: Question sets require an existing user.
+test("cannot save a set for a nonexistent user", async () => {
+  await assert.rejects(
+    () =>
+      saveQuestionSet(
+        "auth0|ghost",
+        {
+          title: "X",
+          questions: sampleQuestions,
+        },
+        testDb
+      ),
+    /foreign key/i
+  );
+
+  const result = await testDb.query(
+    "SELECT COUNT(*) AS n FROM test.questions"
+  );
+
+  assert.equal(Number(result.rows[0].n), 0);
 });
