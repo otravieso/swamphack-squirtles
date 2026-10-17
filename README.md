@@ -84,20 +84,37 @@ App.jsx ─ UploadNotes ─→ client/src/api ──(login token)──→ POST 
 
 ## Game notes
 
-- Edit the story in `client/src/game/story.js` (plain data: `scene`, `say`, `q`, `choice`, `end`).
-  `*text in asterisks*` renders as glitch text in the Professor's lines.
-- The story currently has **4** question spots; Gemini generates **10** per upload. Add more `q(...)` nodes to use them all
-  (after a set runs out, questions repeat rather than erroring).
+- The story in `client/src/game/story.js` is transcribed **word for word** from the team script
+  (only formatting differs: `*text*` = glitch text for the Professor's noises, stage directions shown as `(pauses)`).
+  It has **14** question spots (including two Rapid Fire rounds); Gemini generates 10 per upload, so a few repeat.
 - `GameApp` accepts optional `script` and `hooks` props (`onAnswer`, `onChoice`, `onDeath`, `onEnd`).
 - `client/src/game/game.js` is the old DOM-based engine and is no longer used.
+
+### Survival stats (Oregon Trail style)
+
+| Stat | Starts at | Lost by |
+|---|---|---|
+| **Intellect** (`intelligence`) | 5 | 1 per wrong answer |
+| **Health** | 5 | water bottle −1, running the stairs −2, egg salad −1, chicken nuggets −1, robo fuel −1, sprint/punch/cloth −1 |
+| **Thirst** | 3 | licking the desk / not drinking −1, the railing −1, lasagna −1, the nugget drink −1 |
+| **Hunger** | 2 | the window ledge −1, egg salad −1 |
+
+Any stat reaching 0 ends the game. There is no timer: stats only change through the script's decisions and answers
+(`DECAY_EVERY = 0` in `stats.js`). Add `?debug` to the URL to see the stats while playing.
+
+### Final score (`client/src/game/score.js`, logic only, no UI yet)
+
+`computeScore(stats, { completed })`: **100 per intellect point** (the most important), 40 per health, 30 per hunger,
+30 per thirst, plus **250** for reaching the end. A perfect run scores **1,100**; dying gives no completion bonus.
+The game passes `stats` to its `onEnd({ stats })` and `onDeath({ cause, stats })` hooks, so any screen can show it.
 
 ### Manual game test checklist
 1. Advance dialogue, including skipping the typing animation.
 2. Answer a question correctly and incorrectly on separate playthroughs.
-3. Make a water choice, descend to the stairwell, and select cafeteria food.
+3. Make a water choice, descend the stairs, pick cafeteria food and a drink, then the library escape choice.
 4. Reach the chapter completion screen, then restart.
 5. Try bad choices and wrong answers to verify death/restart.
-6. With `?debug`, verify hunger/thirst decay every two questions.
+6. With `?debug`, verify each choice changes the stats listed in the table above (and nothing changes on its own).
 
 ## Team workflow
 
