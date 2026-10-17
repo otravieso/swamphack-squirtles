@@ -69,23 +69,50 @@ $('get').onclick = run(() => api.getQuestionSet($('set-id').value));
 $('delete').onclick = run(() => api.deleteQuestionSet($('set-id').value));
 
 // Notes → Gemini → database
-let loadedFileName = null;
+const MAX_PDF_BYTES = 15 * 1024 * 1024;
+let loadedFileName = null; // a .txt/.md file loaded into the text box
+let loadedPdf = null; // { name, mimeType, data(base64) }, read by Gemini on the server
+
+const readAsBase64 = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1]); // strip "data:...;base64,"
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+
 $('notes-file').onchange = async () => {
   const file = $('notes-file').files[0];
+  loadedFileName = null;
+  loadedPdf = null;
   if (!file) return;
-  $('notes-text').value = await file.text();
-  loadedFileName = file.name;
   if (!$('notes-title').value) $('notes-title').value = file.name.replace(/\.[^.]+$/, '');
+
+  if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
+    if (file.size > MAX_PDF_BYTES) {
+      $('notes-file').value = '';
+      return show('Error: that PDF is too large (max 15 MB).');
+    }
+    loadedPdf = { name: file.name, mimeType: 'application/pdf', data: await readAsBase64(file) };
+    show(`PDF ready: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB). Click "Generate & save questions".`);
+  } else {
+    $('notes-text').value = await file.text();
+    loadedFileName = file.name;
+  }
 };
+
 $('generate').onclick = async () => {
   const button = $('generate');
   button.disabled = true;
-  show('Asking Gemini… this usually takes 5–20 seconds.');
+  show(loadedPdf
+    ? 'Gemini is reading your PDF and writing questions… this can take 15–60 seconds.'
+    : 'Asking Gemini… this usually takes 5–20 seconds.');
   try {
     const saved = await api.generateQuestions({
       title: $('notes-title').value,
       notes: $('notes-text').value,
       sourceFiles: loadedFileName ? [loadedFileName] : [],
+      file: loadedPdf ?? undefined,
     });
     $('set-id').value = saved.id;
     show(saved);

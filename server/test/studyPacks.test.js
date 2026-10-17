@@ -95,6 +95,73 @@ test('waits for the (async) database save to finish', async () => {
   assert.equal(finished, true);
 });
 
+// ── PDFs ─────────────────────────────────────────────────────────────
+const pdfBase64 = Buffer.from('%PDF-1.4 fake pdf bytes').toString('base64');
+const pdfFile = { name: 'Bio Chapter 3.pdf', mimeType: 'application/pdf', data: pdfBase64 };
+
+test('PDF: Gemini reads it, its text goes to generateQuestions, file name is recorded', async () => {
+  const store = fakeStore();
+  let extractedFrom;
+  let receivedNotes;
+  const extract = async (file) => { extractedFrom = file; return '  Mitochondria make ATP.  '; };
+  const generate = async (notes) => { receivedNotes = notes; return [goodQuestion]; };
+  const result = await createStudyPackFromNotes('u', { file: pdfFile }, { extract, generate, save: store.save });
+  assert.deepEqual(extractedFrom, { mimeType: 'application/pdf', data: pdfBase64 });
+  assert.equal(receivedNotes, 'Mitochondria make ATP.');
+  assert.equal(result.title, 'Bio Chapter 3'); // defaults to the file name
+  assert.deepEqual(result.sourceFiles, ['Bio Chapter 3.pdf']);
+});
+
+test('PDF + typed notes are combined', async () => {
+  let receivedNotes;
+  await createStudyPackFromNotes(
+    'u',
+    { title: 'Mixed', notes: 'Typed part.', file: pdfFile },
+    { extract: async () => 'PDF part.', generate: async (n) => { receivedNotes = n; return [goodQuestion]; }, save: fakeStore().save }
+  );
+  assert.equal(receivedNotes, 'Typed part.\n\nPDF part.');
+});
+
+test('PDF: wrong type, empty, too large, or unreadable files are rejected before generating', async () => {
+  const store = fakeStore();
+  let generated = false;
+  const deps = { extract: async () => 'text', generate: async () => { generated = true; return [goodQuestion]; }, save: store.save };
+  const run = (file) => createStudyPackFromNotes('u', { file }, deps);
+
+  await assert.rejects(run({ ...pdfFile, mimeType: 'image/png' }), { status: 415 });
+  await assert.rejects(run({ ...pdfFile, data: '' }), { status: 400 });
+  await assert.rejects(run({ ...pdfFile, data: Buffer.alloc(16 * 1024 * 1024).toString('base64') }), { status: 413 });
+  await assert.rejects(run({ name: 'x.pdf' }), { status: 400 });
+  await assert.rejects(
+    createStudyPackFromNotes('u', { file: pdfFile }, { ...deps, extract: async () => '   ' }),
+    { status: 422 }
+  );
+  assert.equal(generated, false);
+  assert.equal(store.saved.length, 0);
+});
+
+test('PDF: Gemini failing to read it gives a clean error', async () => {
+  const deps = { generate: async () => [goodQuestion], save: fakeStore().save };
+  await assert.rejects(
+    createStudyPackFromNotes('u', { file: pdfFile }, { ...deps, extract: async () => { throw new Error('boom'); } }),
+    { status: 502, message: /read that PDF/ }
+  );
+  await assert.rejects(
+    createStudyPackFromNotes('u', { file: pdfFile }, { ...deps, extract: async () => { throw new Error('429'); } }),
+    { status: 503 }
+  );
+});
+
+test('PDF: very long documents are trimmed instead of failing', async () => {
+  let receivedNotes;
+  await createStudyPackFromNotes(
+    'u',
+    { file: pdfFile },
+    { extract: async () => 'a'.repeat(MAX_NOTES_CHARS + 5000), generate: async (n) => { receivedNotes = n; return [goodQuestion]; }, save: fakeStore().save }
+  );
+  assert.equal(receivedNotes.length, MAX_NOTES_CHARS);
+});
+
 test('isUsableQuestion accepts the shape generateQuestions() returns', () => {
   assert.equal(isUsableQuestion(goodQuestion), true);
   assert.equal(isUsableQuestion({ ...goodQuestion, answerIndex: -1 }), false);

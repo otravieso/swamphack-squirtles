@@ -9,7 +9,7 @@ Built for **SwampHacks**.
 | Part | Status | Where |
 |---|---|---|
 | Login: Auth0 username + password | ✅ done (needs Auth0 setup) | `client/src/auth/`, `server/src/auth/` |
-| Database: users + saved questions | ✅ done | `server/src/db/` |
+| Database: users + saved questions (Tiger Data PostgreSQL) | ✅ done (needs `DATABASE_URL`) | `server/src/db/` |
 | Gemini: notes → questions | ✅ done (needs `GEMINI_API_KEY`) | `server/src/gemini/` |
 | Notes → Gemini → database | ✅ done | `server/src/services/studyPacks.js`, `POST /api/notes` |
 | Game (scenes, robot, UI) | ⬜ team | `client/src/game/` |
@@ -20,6 +20,9 @@ Built for **SwampHacks**.
 
 Requires **Node.js 22.13 or newer** (check with `node -v`; get the LTS from nodejs.org).
 
+You also need the team's keys in `.env` (ask a teammate privately): `DATABASE_URL` (Tiger Data),
+the Auth0 values, and `GEMINI_API_KEY`.
+
 ```bash
 git clone https://github.com/otravieso/swamphack-squirtles.git
 cd swamphack-squirtles
@@ -28,12 +31,13 @@ cp .env.example .env        # Windows: copy .env.example .env
 npm run dev
 ```
 
-Open **http://localhost:5173** for a small test page: sign up, log in, paste notes → generate questions with Gemini, and list saved sets.
+Open **http://localhost:5173** for a small test page: sign up, log in, paste notes or upload a PDF → generate questions with Gemini, and list saved sets.
 
-Works before Auth0 is set up: everything is saved under a "guest" user.
-To turn on real accounts, follow **`server/src/auth/README.md`** (about 10 minutes).
+The server won't start without `DATABASE_URL`. The tables are created once with `node server/setup-db.js`
+(already done for the shared database; see `server/src/db/README.md`).
+Without Auth0 values, everything is saved under a "guest" user. Auth0 setup: **`server/src/auth/README.md`**.
 
-`npm test` runs the database tests.
+`npm test` runs the tests. The database tests use a separate `test` schema in Tiger Data, never real game data.
 
 > ⚠️ **Never commit `.env`.** It's in `.gitignore`.
 
@@ -49,10 +53,10 @@ client/                Browser side (what the player sees)
 server/                Backend (holds the secret keys)
   src/routes/          API endpoints (see its README)
   src/auth/            Auth0 token check + setup guide
-  src/db/              SQLite database: users, question_sets, questions
+  src/db/              Tiger Data PostgreSQL: users, question_sets, questions
   src/gemini/          Gemini API: notes → questions
   src/services/        Glue: notes → Gemini → database
-  test/                Database tests
+  test/                Tests (database + notes→Gemini glue)
 deploy/                Hosting (Vultr + .study domain), later
 ```
 
