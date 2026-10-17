@@ -1,0 +1,63 @@
+/* Styles for the non-game screens (login, upload, saved sets).
+   Colors and fonts match the cozy palette in game/game.css. */
+.page {
+  min-height: 100vh;
+  padding: 24px 16px 48px;
+  font-family: Quicksand, sans-serif;
+  color: #5a2a45;
+  background: radial-gradient(#ffc2da 18%, transparent 20%) 0 0/34px 34px, #ffe3ef;
+}
+
+.card {
+  max-width: 640px;
+  margin: 24px auto;
+  padding: 24px 28px;
+  background: #fff8fb;
+  border: 4px solid #ff8fbd;
+  border-radius: 18px;
+  box-shadow: 0 0 0 4px #fff8, 0 10px 30px #0002;
+}
+.card h1, .card h2 { margin-top: 0; }
+.card.center { text-align: center; }
+.card.center button { margin: 6px; }
+
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; font-weight: 700; }
+.field input[type='text'], .field input:not([type]), .field textarea {
+  font: 500 16px Quicksand, sans-serif;
+  padding: 10px 12px;
+  border: 2px solid #ff8fbd;
+  border-radius: 10px;
+  background: #fff;
+  color: inherit;
+}
+.field textarea { resize: vertical; }
+
+.page button, .back {
+  padding: 10px 16px;
+  font: 700 15px Quicksand, sans-serif;
+  color: #5a2a45;
+  background: #fff8fb;
+  border: 3px solid #ff8fbd;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.page button:hover:not(:disabled), .back:hover { background: #ff8fbd; color: #fff; }
+.page button:disabled { opacity: 0.6; cursor: wait; }
+.page button.primary { background: #ff8fbd; color: #fff; }
+.page button.danger { border-color: #d0506f; }
+
+.status { opacity: 0.85; }
+.error { color: #c0213f; font-weight: 700; }
+
+.userbar { max-width: 640px; margin: 0 auto; display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
+
+.sets { list-style: none; padding: 0; margin: 0; }
+.sets li {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 2px dashed #ffc2da;
+}
+.sets li:last-child { border-bottom: none; }
+.sets li button { margin-left: 6px; }
+
+/* "Back to my notes" button floating over the game */
+.back { position: fixed; top: 12px; right: 14px; z-index: 10; }

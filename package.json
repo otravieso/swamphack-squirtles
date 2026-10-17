@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "dev": "concurrently -n server,client -c magenta,cyan \"npm run dev -w server\" \"npm run dev -w client\"",
-    "test": "npm test -w server"
+    "test": "npm test --workspaces --if-present"
   },
   "devDependencies": {
     "concurrently": "^9.2.0"
