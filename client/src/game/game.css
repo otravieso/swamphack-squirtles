@@ -1,40 +1,119 @@
-@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&family=VT323&display=swap');
-.vn{--bg:#ffe3ef;--dot:#ffc2da;--ink:#5a2a45;--box:#fff8fb;--edge:#ff8fbd;--face:#bff2dc;--eye:#1d4d45;--bot:#4fc9b4;
-  position:relative;width:100%;height:100vh;overflow:hidden;font-family:Quicksand,sans-serif;color:var(--ink);
-  background:radial-gradient(var(--dot) 18%,transparent 20%) 0 0/34px 34px,var(--bg);transition:background-color .6s}
-.vn[data-aggro="1"]{--bg:#f6d9e6;--dot:#e7b2c9}
-.vn[data-aggro="2"]{--bg:#e7c3cf;--dot:#c98ba3;--face:#f3e6a4;--eye:#6b3b00;--edge:#d0506f}
-.vn[data-aggro="3"]{--bg:#3a0f1c;--dot:#5a1428;--ink:#ffd9e0;--box:#2a0a14;--edge:#ff2f55;--face:#ff7a7a;--eye:#2a0000;--bot:#2a9b8b}
-.vn[data-aggro="3"]::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,#0004 0 2px,transparent 2px 4px)}
-.place{position:absolute;top:14px;left:18px;font-weight:700;opacity:.7}
-.bot{position:absolute;left:50%;top:14%;width:200px;height:240px;margin-left:-100px;background:var(--bot);border-radius:22px;
-  border:5px solid #0003;box-shadow:inset 0 -10px #0002;transition:background .6s}
-.screen{margin:18px;height:120px;background:var(--face);border-radius:12px;position:relative;transition:background .6s}
-.eye{position:absolute;top:34px;width:14px;height:20px;border-radius:50%;background:var(--eye);left:38px}
-.eye+.eye{left:auto;right:38px}
-.mouth{position:absolute;left:50%;bottom:20px;width:46px;height:22px;margin-left:-23px;border-bottom:6px solid var(--eye);border-radius:0 0 46px 46px}
-.vn[data-aggro="2"] .eye{height:10px}.vn[data-aggro="3"] .eye{height:8px;transform:skewY(18deg)}
+@import url('https://fonts.googleapis.com/css2?family=Itim&family=Quicksand:wght@500;700&family=VT323&display=swap');
+
+/* ── Palette (matches the overgrown-school mockups) ─────────────────── */
+.vn{--ink:#2f3a2c;--box:#f7f2e4;--edge:#7f9168;--tab:#6e8460;--tab-ink:#f7f2e4;
+  --shell:#c5d0aa;--shell-dark:#93a17a;--screen:#151a19;--glow:#8ff3df;--limb:#3c3f3e;--tie:#8b2b2b;
+  position:relative;width:100%;height:100vh;overflow:hidden;font-family:Itim,Quicksand,sans-serif;color:var(--ink);
+  background:#e9e3d0}
+.vn[data-aggro="2"]{--glow:#f3dd8a;--edge:#9a7a52;--tab:#8a6a45}
+.vn[data-aggro="3"]{--ink:#ffd9e0;--box:#2a0a14;--edge:#ff2f55;--tab:#b3122f;--tab-ink:#fff;--glow:#ff5a6e;--shell:#9fa88c;--shell-dark:#6e7660}
+
+/* ── Scenery: one layer per location, active one fades in ───────────── */
+.scenery{position:absolute;inset:0;z-index:0}
+.scenery-layer{position:absolute;inset:0;opacity:0;transition:opacity .7s ease;
+  /* The image is on top; if the file is missing the CSS fallback underneath shows instead. */
+  background:var(--scene-img) center/cover no-repeat,var(--fallback)}
+.scenery-layer.is-active{opacity:1}
+
+.scenery-classroom{--fallback:
+  linear-gradient(#bfe2f3,#e6f3e7) 3% 12%/24% 48% no-repeat,
+  linear-gradient(#3e5a47,#344c3c) 66% 24%/42% 32% no-repeat,
+  linear-gradient(180deg,#f1ead6 0 64%,#b99a72 64% 100%)}
+.scenery-hallway{--fallback:
+  linear-gradient(#bfe2f3,#e6f3e7) 2% 14%/18% 46% no-repeat,
+  repeating-linear-gradient(90deg,#41608c 0 44px,#2f4a72 44px 48px) 100% 76%/44% 50% no-repeat,
+  linear-gradient(180deg,#efe6cf 0 66%,#d9d2c0 66% 100%)}
+.scenery-cafeteria{--fallback:
+  linear-gradient(#3d5577,#2f4566) 50% 18%/34% 16% no-repeat,
+  linear-gradient(#5a7398,#4a6386) 100% 72%/46% 20% no-repeat,
+  linear-gradient(180deg,#efe6cf 0 48%,#9fb3cb 48% 64%,#dfe4ea 64% 100%)}
+.scenery-library{--fallback:
+  repeating-linear-gradient(180deg,#8a5f3b 0 10px,#c79a5f 10px 52px) 4% 30%/26% 52% no-repeat,
+  linear-gradient(#bfe2f3,#e6f3e7) 80% 14%/22% 50% no-repeat,
+  linear-gradient(180deg,#f0e7cf 0 66%,#e3d4b2 66% 100%)}
+
+/* Mood tint grows with the Professor's aggression. */
+.scenery-tint{position:absolute;inset:0;pointer-events:none;transition:background .8s}
+.vn[data-aggro="1"] .scenery-tint{background:#5a3a2014}
+.vn[data-aggro="2"] .scenery-tint{background:linear-gradient(#4a1e2a33,#2a0a1455)}
+.vn[data-aggro="3"] .scenery-tint{background:radial-gradient(transparent 30%,#3a0010cc),#5a0a1e88}
+.vn[data-aggro="3"]::after{content:"";position:absolute;inset:0;z-index:4;pointer-events:none;
+  background:repeating-linear-gradient(0deg,#0004 0 2px,transparent 2px 4px)}
+
+.place{position:absolute;top:14px;left:18px;z-index:2;padding:4px 14px;border-radius:999px;font-size:15px;letter-spacing:.04em;
+  background:#f7f2e4dd;color:#4f6142;border:2px solid var(--edge)}
+
+/* ── Professor Didactic ─────────────────────────────────────────────── */
+.bot{position:absolute;left:50%;bottom:calc(4% + 120px);z-index:1;width:230px;margin-left:-115px;
+  display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 8px 10px #0003)}
+.sprout{position:relative;height:26px;width:40px}
+.sprout::before{content:"";position:absolute;left:19px;bottom:0;width:3px;height:16px;background:#5f8a3e;border-radius:2px}
+.sprout i{position:absolute;bottom:12px;width:16px;height:10px;background:#7fb04e;border-radius:100% 0}
+.sprout i:first-child{left:5px;transform:rotate(-20deg)}
+.sprout i+i{left:20px;transform:scaleX(-1) rotate(-20deg)}
+.head{width:210px;height:168px;padding:16px;background:var(--shell);border:4px solid var(--shell-dark);border-radius:30px;
+  box-shadow:inset -10px -10px 0 #0000000f;transform:rotate(-3deg);transition:background .6s}
+.screen{position:relative;height:100%;background:var(--screen);border-radius:20px;overflow:hidden;box-shadow:inset 0 0 0 3px #000}
+.eye{position:absolute;top:30%;width:16px;height:30px;border-radius:8px;background:var(--glow);left:30%;
+  box-shadow:0 0 10px var(--glow);transition:height .3s,transform .3s}
+.eye+.eye{left:auto;right:30%}
+.mouth{position:absolute;left:50%;top:60%;width:52px;height:22px;margin-left:-26px;border-bottom:6px solid var(--glow);
+  border-radius:0 0 52px 52px;filter:drop-shadow(0 0 5px var(--glow))}
+.err{display:none}
+.vn[data-aggro="2"] .eye{height:14px;top:36%}
+.vn[data-aggro="2"] .mouth{border-radius:0;height:0;width:44px;margin-left:-22px}
+/* Aggro 3: the red error screen the script describes. */
+.vn[data-aggro="3"] .screen{background:#5b0012;animation:flicker .18s infinite}
+.vn[data-aggro="3"] .eye{height:10px;transform:skewY(18deg)}
 .vn[data-aggro="3"] .eye+.eye{transform:skewY(-18deg)}
-.vn[data-aggro="3"] .mouth{border-radius:0;height:0;border-bottom-style:dotted;width:60px;margin-left:-30px}
-.pad{display:flex;gap:14px;justify-content:center;margin-top:12px}.pad u{width:18px;height:18px;border-radius:50%;background:#ffd84a}
-.pad u:nth-child(2){background:#4a8bff}.pad u:nth-child(3){background:#ff4a6b}
-.bot.talk{animation:bob .25s infinite alternate}@keyframes bob{to{transform:translateY(-6px)}}
-.box{position:absolute;left:5%;right:5%;bottom:4%;min-height:150px;padding:34px 28px 22px;background:var(--box);
-  border:4px solid var(--edge);border-radius:18px;box-shadow:0 0 0 4px #fff8,0 10px 30px #0003;cursor:pointer}
-.name{position:absolute;top:-20px;left:22px;padding:4px 22px;background:var(--edge);color:#fff;font-weight:700;border-radius:14px}
+.vn[data-aggro="3"] .mouth{border-radius:0;height:0;border-bottom-style:dotted;width:64px;margin-left:-32px}
+.vn[data-aggro="3"] .err{display:block;position:absolute;bottom:6px;width:100%;text-align:center;font:18px VT323,monospace;color:#ffb3bf}
+@keyframes flicker{50%{opacity:.85}}
+.torso{position:relative;margin-top:-6px;width:150px;height:110px;background:var(--shell);border:4px solid var(--shell-dark);
+  border-radius:26px 26px 12px 12px;transition:background .6s}
+.collar{position:absolute;top:-2px;left:50%;margin-left:-34px;width:68px;height:22px;
+  background:linear-gradient(135deg,#f3f0e2 50%,transparent 50%) 0 0/34px 22px no-repeat,
+             linear-gradient(225deg,#f3f0e2 50%,transparent 50%) 34px 0/34px 22px no-repeat}
+.tie{position:absolute;top:12px;left:50%;margin-left:-9px;width:18px;height:68px;background:var(--tie);
+  clip-path:polygon(20% 0,80% 0,70% 14%,100% 82%,50% 100%,0 82%,30% 14%)}
+.badge{position:absolute;top:30px;right:20px;width:22px;height:18px;background:#efe6c8;border:2px solid #b49a62;border-radius:3px}
+.arm{position:absolute;top:14px;width:22px;height:74px;background:var(--limb);border-radius:12px}
+.arm-l{left:-24px;transform:rotate(12deg)}
+.arm-r{right:-24px;transform-origin:top center;transform:rotate(-140deg)}
+.bot.talk .arm-r{animation:wave .5s infinite alternate}
+.bot.talk .head{animation:bob .25s infinite alternate}
+@keyframes bob{to{transform:rotate(-3deg) translateY(-5px)}}
+@keyframes wave{to{transform:rotate(-160deg)}}
+
+/* ── Dialogue box ───────────────────────────────────────────────────── */
+.box{position:absolute;left:50%;transform:translateX(-50%);bottom:4%;z-index:3;width:min(900px,92%);min-height:140px;
+  padding:34px 34px 26px;background:var(--box);border:3px solid var(--edge);border-radius:20px;
+  box-shadow:0 10px 30px #0003;cursor:pointer;transition:background .6s}
+.name{position:absolute;top:-22px;left:26px;padding:6px 26px;background:var(--tab);color:var(--tab-ink);font-size:20px;
+  border:3px solid var(--box);border-radius:14px}
 .text{margin:0;font-size:clamp(17px,2.2vw,22px);line-height:1.5;max-width:75ch}
 .box[data-who="thought"] .text,.box[data-who="narrator"] .text{font-style:italic;opacity:.9}
-.next{position:absolute;right:22px;bottom:12px;color:var(--edge);animation:bob .5s infinite alternate}
+.leaf{position:absolute;right:58px;bottom:14px;width:14px;height:9px;background:#7fb04e;border-radius:100% 0;opacity:.8}
+.next{position:absolute;right:20px;bottom:12px;width:0;height:0;border-left:18px solid var(--tab);
+  border-top:11px solid transparent;border-bottom:11px solid transparent;animation:nudge .5s infinite alternate}
+@keyframes nudge{to{transform:translateX(4px)}}
 .glitch{font-family:VT323,monospace;font-size:1.2em;color:#ff2f55;animation:jit .15s infinite}
 @keyframes jit{50%{transform:translate(1px,-1px) skewX(6deg)}}
 .vn[data-aggro="3"] .box[data-who="teacher"] .text{text-transform:uppercase;animation:jit .3s infinite}
-.choices{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,90%);display:grid;gap:12px;z-index:2}
+
+/* ── Choices / overlays ─────────────────────────────────────────────── */
+.choices{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);width:min(560px,90%);display:grid;gap:12px;z-index:3}
 .choices:empty{display:none}
-.choices button,.over button{padding:14px 18px;font:700 17px Quicksand,sans-serif;color:var(--ink);background:var(--box);
-  border:3px solid var(--edge);border-radius:999px;cursor:pointer}
-.choices button:hover,.choices button:focus-visible,.over button:hover{background:var(--edge);color:#fff;outline:none}
-.debug{position:absolute;top:10px;right:14px;font:16px VT323,monospace;background:#000a;color:#7fffd4;padding:4px 8px;border-radius:6px}
-.over{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+.choices button,.over button{padding:14px 18px;font:20px Itim,Quicksand,sans-serif;color:var(--ink);background:var(--box);
+  border:3px solid var(--edge);border-radius:999px;cursor:pointer;box-shadow:0 4px 12px #0002}
+.choices button:hover,.choices button:focus-visible,.over button:hover{background:var(--tab);color:var(--tab-ink);outline:none}
+.debug{position:absolute;top:10px;right:14px;z-index:5;font:16px VT323,monospace;background:#000a;color:#7fffd4;padding:4px 8px;border-radius:6px}
+.over{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
   background:#1a0008ee;color:#ffd9e0;text-align:center;padding:24px}
-.over[hidden],.debug[hidden],.next[hidden],.name[hidden]{display:none}
-@media (prefers-reduced-motion:reduce){.vn *{animation:none!important}}
+.over[hidden],.debug[hidden],.next[hidden],.name[hidden],.place[hidden]{display:none}
+
+@media (max-width:640px){
+  .bot{transform:scale(.72);transform-origin:bottom center;bottom:calc(4% + 150px)}
+  .box{padding:30px 20px 24px}
+}
+@media (prefers-reduced-motion:reduce){.vn *{animation:none!important;transition:none!important}}

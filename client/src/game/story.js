@@ -140,6 +140,9 @@ export const story = [
   T('WOOWEEEEE. I’m so glad. Good idea and it might be good to go over some pronunciation too. It\'s pronounced lai·breh·ree.Say it with me'),
   Y('library'),
   T('Good, lets head over'),
+
+  // ── Hallway: walking to the library ─────────────────────────────────
+  scene('Hallway', 0.75),
   T('Why not one more question while we head over'),
   q([], []),
   N('You head over to the library. On the way there you notice that professor Didactic is twitching a lot. Maybe he got bugs in his pants. AH Ha HA. Get it? Ants in your pants. But he is a computer, so he has bugs Ah Ha. I’m so smart. OH hehehe Ants in his PARTS HEHEHEHAAAA'),
