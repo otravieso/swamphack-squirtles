@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Secrets: NEVER commit real keys. Copy .env.example to .env instead.
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+client/dist/
+
+# Server runtime data (saved progress, uploaded notes)
+server/data/*
+!server/data/.gitkeep
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/*
+!.vscode/extensions.json
+.idea/

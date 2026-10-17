@@ -1,0 +1,6 @@
+# Normalize line endings so Windows/Mac/Linux teammates do not fight over them
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ogg binary
+*.mp3 binary
