@@ -10,5 +10,6 @@ API endpoints. All except `/api/health` require login.
 | POST | `/api/question-sets` | Save a set `{ title, sourceFiles?, questions[] }` |
 | GET | `/api/question-sets/:id` | One set with its questions |
 | DELETE | `/api/question-sets/:id` | Delete a set |
+| POST | `/api/notes` | `{ title?, notes, sourceFiles? }` → Gemini generates questions → saved for this user → returns the set |
 
-Planned: `POST /api/notes`: upload notes → Gemini → save with `saveQuestionSet()`.
+`/api/notes` logic lives in `server/src/services/studyPacks.js` (calls `generateQuestions()` from `server/src/gemini/`, then `saveQuestionSet()`).

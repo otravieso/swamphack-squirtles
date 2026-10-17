@@ -25,4 +25,5 @@ export const config = {
 
 export const features = {
   auth0: Boolean(config.auth0.domain && config.auth0.audience),
+  gemini: Boolean(process.env.GEMINI_API_KEY),
 };
