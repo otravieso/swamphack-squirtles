@@ -1,0 +1,19 @@
+{
+  "name": "swamphack-squirtles",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c magenta,cyan \"npm run dev -w server\" \"npm run dev -w client\"",
+    "test": "npm test -w server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  },
+  "engines": {
+    "node": ">=22.13"
+  }
+}

@@ -6,6 +6,12 @@ node_modules/
 .env.*
 !.env.example
 
+# Local database (each teammate has their own)
+server/data/
+*.db
+*.db-wal
+*.db-shm
+
 # Build output
 dist/
 

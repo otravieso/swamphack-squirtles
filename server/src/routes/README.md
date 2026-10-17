@@ -1,4 +1,14 @@
 # server/src/routes/
 
-One file per group of endpoints. Planned:
-- `POST /api/notes`: upload notes → returns generated questions
+API endpoints. All except `/api/health` require login.
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/api/health` | Server is up; which services are configured |
+| GET | `/api/me` | The logged-in user's database record |
+| GET | `/api/question-sets` | List the user's saved question sets |
+| POST | `/api/question-sets` | Save a set `{ title, sourceFiles?, questions[] }` |
+| GET | `/api/question-sets/:id` | One set with its questions |
+| DELETE | `/api/question-sets/:id` | Delete a set |
+
+Planned: `POST /api/notes`: upload notes → Gemini → save with `saveQuestionSet()`.

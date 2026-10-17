@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SwampHack Squirtles: login + database test</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 720px; margin: 32px auto; padding: 0 16px; }
+      section { border: 1px solid #ccc; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }
+      button { margin: 0 8px 8px 0; }
+      pre { background: #f4f4f4; padding: 12px; overflow: auto; max-height: 360px; white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <!-- TEMPORARY page for testing login + the database. The game replaces it later. -->
+    <h1>Login + database test</h1>
+    <p id="status">Checking…</p>
+
+    <section>
+      <h2>Account</h2>
+      <button id="signup">Sign up</button>
+      <button id="login">Log in</button>
+      <button id="logout">Log out</button>
+      <button id="me">Who am I? (/api/me)</button>
+    </section>
+
+    <section>
+      <h2>Saved questions</h2>
+      <button id="save">Save sample question set</button>
+      <button id="list">List my sets</button>
+      <label>Set id <input id="set-id" type="number" min="1" style="width: 5em" /></label>
+      <button id="get">Open set</button>
+      <button id="delete">Delete set</button>
+    </section>
+
+    <pre id="output">Results show up here.</pre>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

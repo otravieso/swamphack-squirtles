@@ -1,4 +1,11 @@
 # client/src/auth/
 
-Auth0 login in the browser (Auth0 SPA SDK): log in, log out, and get the
-token that `src/api/` attaches to server requests.
+`auth.js`: Auth0 login in the browser. Login and sign-up use Auth0's hosted
+username + password page.
+
+```js
+import { initAuth, login, signup, logout } from './auth.js';
+const { user } = await initAuth(); // once at startup; user is null if logged out
+```
+
+Setup steps: `server/src/auth/README.md`.
