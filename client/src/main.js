@@ -46,6 +46,7 @@ const sampleSet = {
     $('status').textContent = 'Cannot reach the server. Is `npm run dev` running?';
     return;
   }
+  if (!health.features.gemini) $('generate').title = 'Add GEMINI_API_KEY to .env first';
   const { user, error } = await initAuth().catch((err) => {
     console.error(err);
     return { user: null, error: err.message };
@@ -66,3 +67,31 @@ $('save').onclick = run(() => api.saveQuestionSet(sampleSet));
 $('list').onclick = run(() => api.listQuestionSets());
 $('get').onclick = run(() => api.getQuestionSet($('set-id').value));
 $('delete').onclick = run(() => api.deleteQuestionSet($('set-id').value));
+
+// Notes → Gemini → database
+let loadedFileName = null;
+$('notes-file').onchange = async () => {
+  const file = $('notes-file').files[0];
+  if (!file) return;
+  $('notes-text').value = await file.text();
+  loadedFileName = file.name;
+  if (!$('notes-title').value) $('notes-title').value = file.name.replace(/\.[^.]+$/, '');
+};
+$('generate').onclick = async () => {
+  const button = $('generate');
+  button.disabled = true;
+  show('Asking Gemini… this usually takes 5–20 seconds.');
+  try {
+    const saved = await api.generateQuestions({
+      title: $('notes-title').value,
+      notes: $('notes-text').value,
+      sourceFiles: loadedFileName ? [loadedFileName] : [],
+    });
+    $('set-id').value = saved.id;
+    show(saved);
+  } catch (err) {
+    show(`Error: ${err.message}`);
+  } finally {
+    button.disabled = false;
+  }
+};

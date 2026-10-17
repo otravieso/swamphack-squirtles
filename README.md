@@ -10,7 +10,8 @@ Built for **SwampHacks**.
 |---|---|---|
 | Login: Auth0 username + password | ✅ done (needs Auth0 setup) | `client/src/auth/`, `server/src/auth/` |
 | Database: users + saved questions | ✅ done | `server/src/db/` |
-| Gemini: notes → questions | ⬜ next | `server/src/gemini/` |
+| Gemini: notes → questions | ✅ done (needs `GEMINI_API_KEY`) | `server/src/gemini/` |
+| Notes → Gemini → database | ✅ done | `server/src/services/studyPacks.js`, `POST /api/notes` |
 | Game (scenes, robot, UI) | ⬜ team | `client/src/game/` |
 | Art & audio | ⬜ team | `client/public/assets/` |
 | Hosting (Vultr + .study domain) | ⬜ later | `deploy/` |
@@ -27,7 +28,7 @@ cp .env.example .env        # Windows: copy .env.example .env
 npm run dev
 ```
 
-Open **http://localhost:5173** for a small test page: sign up, log in, save and list questions.
+Open **http://localhost:5173** for a small test page: sign up, log in, paste notes → generate questions with Gemini, and list saved sets.
 
 Works before Auth0 is set up: everything is saved under a "guest" user.
 To turn on real accounts, follow **`server/src/auth/README.md`** (about 10 minutes).
@@ -49,7 +50,8 @@ server/                Backend (holds the secret keys)
   src/routes/          API endpoints (see its README)
   src/auth/            Auth0 token check + setup guide
   src/db/              SQLite database: users, question_sets, questions
-  src/gemini/          Gemini API: notes → questions (next)
+  src/gemini/          Gemini API: notes → questions
+  src/services/        Glue: notes → Gemini → database
   test/                Database tests
 deploy/                Hosting (Vultr + .study domain), later
 ```
@@ -59,7 +61,7 @@ deploy/                Hosting (Vultr + .study domain), later
 ```
 game → client/src/api ──(login token)──→ server/src/routes → server/src/auth (who is this?)
                                                           → server/src/db   (save / load questions)
-                                                          → server/src/gemini (generate questions, next)
+                                                          → server/src/gemini (generate questions)
 ```
 
 ## Team workflow

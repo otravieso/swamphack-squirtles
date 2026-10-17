@@ -5,6 +5,7 @@ import { config, features } from './config.js';
 import { testConnection } from './db/db.js';
 import meRouter from './routes/me.js';
 import questionSetsRouter from './routes/questionSets.js';
+import notesRouter from './routes/notes.js';
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.get('/api/health', (_req, res) => {
 // API routes
 app.use('/api/me', meRouter);
 app.use('/api/question-sets', questionSetsRouter);
+app.use('/api/notes', notesRouter);
 
 // Central error handler
 app.use((err, _req, res, _next) => {
@@ -47,6 +49,9 @@ async function startServer() {
       console.log('Database: Tiger Data PostgreSQL');
       console.log(
         `Auth0: ${features.auth0 ? 'ON' : 'OFF (guest mode)'}`
+      );
+      console.log(
+        `Gemini: ${features.gemini ? 'ON' : 'OFF (add GEMINI_API_KEY to .env)'}`
       );
     });
   } catch (error) {
