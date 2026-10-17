@@ -1,6 +1,9 @@
 export const MAX = { intelligence: 5, health: 5, thirst: 5, hunger: 5 };
-export const START = { intelligence: 5, health: 5, thirst: 3, hunger: 3 };
-export const DECAY_EVERY = 2;
+// intelligence = intellect. Starting values are set so every stat can be lost through bad decisions
+// in the script (worst case: health -6, thirst -4, hunger -2, intellect -1 per wrong answer).
+export const START = { intelligence: 5, health: 5, thirst: 3, hunger: 2 };
+// Automatic hunger/thirst loss every N questions. 0 = off: only the script's decisions change stats.
+export const DECAY_EVERY = 0;
 
 export class Stats {
   constructor(init = START) { this.v = { ...init }; this.beats = 0; this.subs = []; }
@@ -14,7 +17,7 @@ export class Stats {
   }
   tick() {
     this.beats++;
-    if (this.beats % DECAY_EVERY === 0) this.apply({ thirst: -1, hunger: -1 });
+    if (DECAY_EVERY > 0 && this.beats % DECAY_EVERY === 0) this.apply({ thirst: -1, hunger: -1 });
   }
   get dead() { return Object.keys(this.v).find(key => this.v[key] <= 0) ?? null; }
   snapshot() { return { ...this.v, beats: this.beats }; }
