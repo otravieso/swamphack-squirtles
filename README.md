@@ -1,69 +1,50 @@
-# SwampHack Squirtles 🐢
+# React gameplay conversion — Edgar branch
 
-An AI-powered psychological study adventure. Students upload their notes, a cute robot
-teacher turns them into lessons… and slowly stops wanting them to leave.
-Built for **SwampHacks**.
+This archive contains **new or replacement files only**. No GitHub changes were made.
 
-## Status
+## Copy files
 
-| Part | Status | Where |
-|---|---|---|
-| Login: Auth0 username + password | ✅ done (needs Auth0 setup) | `client/src/auth/`, `server/src/auth/` |
-| Database: users + saved questions | ✅ done | `server/src/db/` |
-| Gemini: notes → questions | ⬜ next | `server/src/gemini/` |
-| Game (scenes, robot, UI) | ⬜ team | `client/src/game/` |
-| Art & audio | ⬜ team | `client/public/assets/` |
-| Hosting (Vultr + .study domain) | ⬜ later | `deploy/` |
+Copy `client/src/GameApp.jsx` into the same path in your repository, replacing the old component.
+Copy all four `.jsx` files from `client/src/components/` into a new `client/src/components/` folder.
 
-## Getting started
+Keep these existing files unchanged:
+- `client/src/main.js`
+- `client/index.html`
+- `client/src/game/story.js`
+- `client/src/game/stats.js`
+- `client/src/game/questionProvider.js`
+- `client/src/game/game.css`
+- `client/vite.config.js`
+- backend, auth and database files
 
-Requires **Node.js 22.13 or newer** (check with `node -v`; get the LTS from nodejs.org).
+After testing the new React version, `client/src/game/game.js` (the old DOM-based engine) is unused and can be deleted. Don't delete it until you've confirmed the new game works.
+
+## Run
+
+From the repository root:
 
 ```bash
-git clone https://github.com/otravieso/swamphack-squirtles.git
-cd swamphack-squirtles
-npm install
-cp .env.example .env        # Windows: copy .env.example .env
-npm run dev
+npm run dev -w client
 ```
 
-Open **http://localhost:5173** for a small test page: sign up, log in, save and list questions.
+Open the Vite local URL. Add `?debug` to see survival stats.
 
-Works before Auth0 is set up: everything is saved under a "guest" user.
-To turn on real accounts, follow **`server/src/auth/README.md`** (about 10 minutes).
+## Test
 
-`npm test` runs the database tests.
+1. Advance dialogue, including skipping the typing animation.
+2. Answer a question correctly and incorrectly on separate playthroughs.
+3. Make a water choice, descend to the stairwell, and select cafeteria food.
+4. Reach the chapter completion screen, then restart.
+5. Try bad choices and wrong answers to verify death/restart.
+6. Test with `?debug` to verify hunger/thirst decay every two questions.
 
-> ⚠️ **Never commit `.env`.** It's in `.gitignore`.
+The story has four question nodes. The sample question provider has five unique questions; expanding the story beyond five question nodes requires additional questions or Gemini integration.
 
-## Project structure
+## Integration
 
-```
-client/                Browser side (what the player sees)
-  src/game/            Game code: scenes, robot teacher, dialogue, question UI
-  src/api/api.js       Calls to our server (attaches the login token)
-  src/auth/auth.js     Auth0 login / sign-up / logout
-  public/assets/       Sprites, tilesets, sounds
-  index.html, src/main.js   Temporary test page (replace with the game)
-server/                Backend (holds the secret keys)
-  src/routes/          API endpoints (see its README)
-  src/auth/            Auth0 token check + setup guide
-  src/db/              SQLite database: users, question_sets, questions
-  src/gemini/          Gemini API: notes → questions (next)
-  test/                Database tests
-deploy/                Hosting (Vultr + .study domain), later
-```
+`GameApp` accepts optional `script` and `hooks` props. `hooks` supports `onAnswer`, `onChoice`, `onDeath`, and `onEnd`.
+The question provider still uses `getQuestion({difficulty, seen})` and `setQuestionProvider(...)`.
 
-## How the pieces connect
+## Important
 
-```
-game → client/src/api ──(login token)──→ server/src/routes → server/src/auth (who is this?)
-                                                          → server/src/db   (save / load questions)
-                                                          → server/src/gemini (generate questions, next)
-```
-
-## Team workflow
-
-- Work on a branch: `git checkout -b your-name/feature`
-- Commit small, push, open a Pull Request; a teammate merges it.
-- `git pull` before you start working.
+Vite stays in the project as the development/build tool. React now renders and manages the entire gameplay UI. The code has not been browser-tested against your machine, so check the browser console if an error appears.
