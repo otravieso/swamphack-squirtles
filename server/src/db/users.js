@@ -10,7 +10,7 @@ export async function upsertUser({ id, username }, db = getDb()) {
     VALUES ($1, $2)
     ON CONFLICT (id)
     DO UPDATE SET
-      username = EXCLUDED.username,
+      username = COALESCE(EXCLUDED.username, users.username),
       last_login = NOW()
     RETURNING id, username, created_at, last_login
     `,
