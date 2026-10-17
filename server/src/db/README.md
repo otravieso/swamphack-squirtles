@@ -7,7 +7,7 @@ and gitignored. Each teammate has their own local copy.
 ## Tables
 
 ```
-users            id (Auth0 user id) · username · email · created_at · last_login
+users            id (Auth0 user id) · username · created_at · last_login
   └─ question_sets   id · user_id · title · source_files · created_at
        └─ questions      id · set_id · position · question · options (JSON) · answer_index
                          explanation · topic · difficulty (1-5) · source_quote

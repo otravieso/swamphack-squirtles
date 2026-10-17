@@ -46,20 +46,21 @@ const sampleSet = {
     $('status').textContent = 'Cannot reach the server. Is `npm run dev` running?';
     return;
   }
-  const { user } = await initAuth().catch((err) => {
+  const { user, error } = await initAuth().catch((err) => {
     console.error(err);
-    return { user: null };
+    return { user: null, error: err.message };
   });
   $('status').textContent = !authEnabled
     ? 'Auth0 not configured yet (fill in .env). Everything is saved as "guest".'
     : user
-      ? `Logged in as ${user.nickname || user.name || user.email}`
+      ? `Logged in as ${user.username || user.nickname || user.name}`
       : 'Not logged in. Saving questions requires logging in.';
+  if (error) show(`Auth0 login error → ${error}`);
 })();
 
-$('signup').onclick = () => signup();
-$('login').onclick = () => login();
-$('logout').onclick = () => logout();
+$('signup').onclick = run(() => signup());
+$('login').onclick = run(() => login());
+$('logout').onclick = run(() => logout());
 $('me').onclick = run(() => api.me());
 $('save').onclick = run(() => api.saveQuestionSet(sampleSet));
 $('list').onclick = run(() => api.listQuestionSets());

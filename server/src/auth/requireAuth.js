@@ -3,7 +3,7 @@
 // The browser logs in with Auth0 (username + password), gets an access token,
 // and sends it as "Authorization: Bearer <token>". This middleware checks the
 // token's signature with Auth0, then makes sure the user exists in our database.
-// After it runs, routes can use `req.user` = { id, username, email }.
+// After it runs, routes can use `req.user` = { id, username, created_at, last_login }.
 //
 // If AUTH0_DOMAIN / AUTH0_AUDIENCE aren't set yet, every request is treated as a
 // single "guest" user so teammates can work before Auth0 is configured.
@@ -34,7 +34,6 @@ export function requireAuth(req, res, next) {
       id: claims.sub, // e.g. "auth0|65f2c…"
       // Added by the Auth0 Post-Login Action (server/src/auth/README.md)
       username: claims[`${ns}username`] ?? null,
-      email: claims[`${ns}email`] ?? null,
     });
     next();
   });

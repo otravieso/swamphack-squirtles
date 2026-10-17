@@ -2,7 +2,8 @@
 // Uses an in-memory database, so it never touches the real data file.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { openDatabase } from '../src/db/db.js';
+import { DatabaseSync } from 'node:sqlite';
+import { openDatabase, migrate } from '../src/db/db.js';
 import { upsertUser, getUser } from '../src/db/users.js';
 import {
   saveQuestionSet,
@@ -26,17 +27,28 @@ const sampleQuestions = [
 
 function freshDb() {
   const db = openDatabase(':memory:');
-  upsertUser({ id: 'auth0|alice', username: 'alice', email: 'a@x.com' }, db);
+  upsertUser({ id: 'auth0|alice', username: 'alice' }, db);
   upsertUser({ id: 'auth0|bob', username: 'bob' }, db);
   return db;
 }
 
-test('upsertUser creates then updates without wiping fields', () => {
+test('upsertUser creates, updates, and keeps username if a login has none', () => {
   const db = freshDb();
-  const updated = upsertUser({ id: 'auth0|alice', username: 'alice2' }, db);
-  assert.equal(updated.username, 'alice2');
-  assert.equal(updated.email, 'a@x.com'); // kept
+  assert.equal(upsertUser({ id: 'auth0|alice', username: 'alice2' }, db).username, 'alice2');
+  assert.equal(upsertUser({ id: 'auth0|alice' }, db).username, 'alice2'); // kept
+  assert.equal('email' in getUser('auth0|alice', db), false);
   assert.equal(getUser('nobody', db), null);
+});
+
+test('old database files with an email column are upgraded', () => {
+  const old = new DatabaseSync(':memory:');
+  old.exec(`CREATE TABLE users (id TEXT PRIMARY KEY, username TEXT, email TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')), last_login TEXT NOT NULL DEFAULT (datetime('now')))`);
+  old.exec(`INSERT INTO users (id, username, email) VALUES ('auth0|old', 'olduser', 'x@y.com')`);
+  migrate(old);
+  const cols = old.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
+  assert.equal(cols.includes('email'), false);
+  assert.equal(getUser('auth0|old', old).username, 'olduser');
 });
 
 test('save → list → get round-trips questions in order', () => {

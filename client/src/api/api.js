@@ -28,7 +28,7 @@ export const api = {
   /** { ok, features: { auth0 } } */
   health: () => request('/health'),
 
-  /** { id, username, email, created_at, last_login } */
+  /** { id, username, created_at, last_login } */
   me: () => request('/me'),
 
   /** [{ id, title, sourceFiles, createdAt, questionCount }] */

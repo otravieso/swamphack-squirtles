@@ -15,7 +15,6 @@ const SCHEMA = `
   CREATE TABLE IF NOT EXISTS users (
     id          TEXT PRIMARY KEY,               -- Auth0 user id, e.g. "auth0|65f…"
     username    TEXT,
-    email       TEXT,
     created_at  TEXT NOT NULL DEFAULT (datetime('now')),
     last_login  TEXT NOT NULL DEFAULT (datetime('now'))
   );
@@ -53,7 +52,14 @@ export function openDatabase(file = config.databasePath) {
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec('PRAGMA journal_mode = WAL;');
   db.exec(SCHEMA);
+  migrate(db);
   return db;
+}
+
+// Small upgrades for database files created by older versions of the code.
+export function migrate(db) {
+  const userColumns = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
+  if (userColumns.includes('email')) db.exec('ALTER TABLE users DROP COLUMN email');
 }
 
 /** Run `fn` inside a transaction: all of it is saved, or none of it. */

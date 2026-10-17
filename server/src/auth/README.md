@@ -1,7 +1,8 @@
 # server/src/auth/: Auth0 setup (username + password login)
 
 Auth0 stores usernames and passwords (hashed, with breach detection etc.).
-Our database only stores the Auth0 user id, username and email, plus their questions.
+Our database only stores the Auth0 user id and username, plus their questions.
+Email is turned off: players sign up with just a username and password.
 
 `requireAuth.js` checks the login token on every protected request and creates the
 user's row in our database the first time they show up.
@@ -15,6 +16,7 @@ Sign up at **auth0.com** (use the MLH link for the challenge). Note your domain,
 **Authentication → Database → Username-Password-Authentication**
 - Enable usernames. Older dashboards have a **"Requires Username"** toggle. Newer ones set it
   under the connection's **Attributes** tab (add *Username* as an identifier).
+- On the same **Attributes** tab, configure **Email**: turn off "Use as Identifier" and set signup to **Off**.
 - Optional: set the password policy strength on the same page.
 
 ### 3. Create the app (for the browser game)
@@ -42,7 +44,6 @@ Access tokens don't include the username by default. Add it with an Action:
 exports.onExecutePostLogin = async (event, api) => {
   const ns = 'https://swamphack-squirtles/';
   api.accessToken.setCustomClaim(ns + 'username', event.user.username || event.user.nickname);
-  api.accessToken.setCustomClaim(ns + 'email', event.user.email);
 };
 ```
 
