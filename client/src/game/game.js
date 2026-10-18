@@ -9,10 +9,10 @@ export function startGame(root, opts = {}) {
   const script = opts.story ?? defaultStory;
   const NAMES = { teacher: 'Professor', you: 'You', thought: 'You', narrator: '' };
   const DEATHS = {
-    intelligence: 'Your mind goes quiet. The Professor smiles. "Lesson over."',
-    health: 'Your body gives out. The Professor sighs. "Fragile things."',
-    thirst: 'Your throat closes. The Professor hums. "Should have asked for water."',
-    hunger: 'Your stomach finally stops asking. The Professor says, "Hm. Efficient."',
+    intelligence: 'Your mind goes quiet... It died from lack of nural activiy...',
+    health: 'Your body gives out cause you picked some bad options numnuts',
+    thirst: 'No water? A blue figure flashes for a split second...',
+    hunger: 'Are you embarrased? I would be...',
   };
   root.innerHTML = `<div class="vn" data-aggro="0" tabindex="0"><div class="place"></div>
     <div class="bot"><div class="screen"><i class="eye"></i><i class="eye"></i><b class="mouth"></b></div>
@@ -196,7 +196,9 @@ export function startGame(root, opts = {}) {
         }
         hooks.onDeath?.({ cause: error.message, stats: stats.snapshot() });
         vn.dataset.aggro = '3'; choicesEl.replaceChildren();
-        await showOverlay('You died', DEATHS[error.message] ?? 'Your adventure has ended.');
+        // Say what killed you first, then show the game-over screen.
+        await say('narrator', DEATHS[error.message] ?? 'Your adventure has ended.');
+        await showOverlay('You died', `Cause of death: ${error.message}`);
       }
     }
   }
