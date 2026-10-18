@@ -8,6 +8,7 @@ import { story } from './game/story.js';
 import { Stats } from './game/stats.js';
 import { getQuestion } from './game/questionProvider.js';
 import { SCENES, sceneFor, preloadScenes } from './game/scenes.js';
+import { sound } from './game/sound.js';
 import './game/game.css';
 
 // Shown on the game-over screen so the player knows what they died of.
@@ -37,6 +38,7 @@ export default function GameApp({ script = story, hooks = {} }) {
   const finish = useCallback((title, message) => {
     const game = runtime.current;
     if (!game) return;
+    sound.play(title === 'You died' ? 'death' : title === 'Chapter complete' ? 'complete' : 'wrong');
     game.mode = 'ended';
     publish({ choices: null, ending: { title, message }, stats: game.stats.snapshot() });
     if (title === 'Chapter complete') hooksRef.current.onEnd?.({ stats: game.stats.snapshot() });
@@ -73,6 +75,7 @@ export default function GameApp({ script = story, hooks = {} }) {
         if (node.t === 'scene') {
           // Switch the background to match where the dialogue is happening.
           const where = sceneFor(node.name);
+          sound.play('scene');
           const scene = node.name === '404' ? EXIT_SCENE : where?.key ?? null;
           game.scene = scene;
           publish({ place: node.name, scene, aggro: Math.max(0, Math.min(3, Math.round(node.aggro * 3))) });
@@ -154,9 +157,17 @@ export default function GameApp({ script = story, hooks = {} }) {
     return () => window.clearTimeout(timer);
   }, [view.refreshing, restart]);
 
+  // Sound: background hum, creepier as the Professor gets angrier (calm on the 404 page)
+  useEffect(() => { sound.start(); return () => sound.stop(); }, []);
+  useEffect(() => { sound.setAggro(atExit ? 0 : view.ending?.title === 'You died' ? 3 : view.aggro); }, [atExit, view.aggro, view.ending]);
+  useEffect(() => { if (view.refreshing) sound.play('scene'); }, [view.refreshing]);
+  const [muted, setMuted] = useState(sound.muted);
+  useEffect(() => sound.onMutedChange(setMuted), []);
+
   const next = useCallback(() => {
     const game = runtime.current;
     if (!game) return;
+    sound.play('advance');
     if (game.mode === 'questionPrompt') {
       game.mode = 'question';
       publish({ choices: { kind: 'question', labels: game.currentQuestion.question.choices } });
@@ -172,6 +183,7 @@ export default function GameApp({ script = story, hooks = {} }) {
     if (game.mode === 'choice') {
       const option = view.choices?.options?.[index];
       if (!option) return;
+      sound.play(Object.values(option.fx ?? {}).some(v => v < 0) ? 'hurt' : 'select');
       hooksRef.current.onChoice?.({ label: option.label, fx: option.fx });
       publish({ choices: null, lastChoice: option.label });
       changeStats(option.fx);
@@ -179,6 +191,7 @@ export default function GameApp({ script = story, hooks = {} }) {
     } else if (game.mode === 'question') {
       const { question, node } = game.currentQuestion;
       const correct = index === question.correctIndex;
+      sound.play(correct ? 'correct' : 'wrong');
       hooksRef.current.onAnswer?.({ question, correct, choiceIndex: index });
       const branch = correct ? node.right : node.wrong;
       const after = correct ? [] : [{ t: '_feedback', text: `Correct answer: ${question.choices[question.correctIndex]}.${question.explanation ? ' ' + question.explanation : ''}` }];
@@ -207,8 +220,10 @@ export default function GameApp({ script = story, hooks = {} }) {
     {atExit && <ExitNotFound canRefresh={beatGame} refreshing={view.refreshing} onRefresh={refresh} />}
     {!atExit && <Robot talking={view.dialogue?.who === 'teacher' && typing && !view.ending} />}
     {choices && <ChoiceBox labels={choices.kind === 'question' ? choices.labels : choices.options.map(o => o.label)} onSelect={choose} />}
-    {!beatGame && <DialogueBox node={view.dialogue} waitingForChoice={Boolean(choices) || Boolean(view.ending)} onAdvance={next} onTypingChange={setTyping} />}
+    {!beatGame && <DialogueBox node={view.dialogue} waitingForChoice={Boolean(choices) || Boolean(view.ending)} onAdvance={next} onTypingChange={setTyping} onType={sound.blip} />}
     {debug && view.stats && <div className="debug">{Object.entries(view.stats).map(([k, v]) => `${k}:${v}`).join('  ')}</div>}
     {view.ending && !beatGame && <GameOver {...view.ending} onRestart={restart} />}
+    <button type="button" className="mute" onClick={() => sound.setMuted(!muted)}
+      aria-label={muted ? 'Unmute' : 'Mute'}>{muted ? '🔇' : '🔊'}</button>
   </div>;
 }
