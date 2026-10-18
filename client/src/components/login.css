@@ -1,0 +1,141 @@
+/* Login / register screen. Everything is prefixed .lp- so it can't clash with the
+   pink screens.css / game.css styles or the dashboard's styles. */
+@import url('https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Patrick+Hand&display=swap');
+
+.lp-page {
+  --ink: #4a3a6b;
+  --text: #3f3358;
+  --cream: #fffcf2;
+  position: relative;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: clamp(20px, 5vh, 44px) 20px 190px;
+  background: #f8e6da;
+  color: var(--text);
+  font-family: 'Patrick Hand', cursive;
+  overflow: hidden;
+}
+/* tan floor */
+.lp-page::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 150px;
+  background: #ebc9a0;
+  border-top: 4px solid var(--ink);
+  pointer-events: none;
+}
+.lp-page > * { position: relative; z-index: 1; }
+
+.lp-head { text-align: center; }
+.lp-head h1 {
+  margin: 0;
+  font: 400 clamp(26px, 5vw, 58px)/1.1 'Silkscreen', monospace;
+  letter-spacing: 2px;
+  color: var(--ink);
+}
+.lp-head p { margin: 14px 0 0; font-size: clamp(18px, 2.2vw, 28px); }
+
+.lp-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(24px, 6vw, 80px);
+  margin-top: clamp(28px, 6vh, 56px);
+}
+
+/* robot + speech bubble */
+.lp-bot { display: flex; flex-direction: column; align-items: center; width: min(360px, 90vw); }
+.lp-bubble {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 112px;
+  display: flex;
+  align-items: center;
+  padding: 0 22px;
+  margin-bottom: 26px;
+  background: var(--cream);
+  border: 4px solid var(--ink);
+  border-radius: 16px;
+  box-shadow: 5px 5px 0 var(--ink);
+  font-size: 24px;
+  line-height: 1.25;
+}
+.lp-bubble::before, .lp-bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  width: 0; height: 0;
+  border-style: solid;
+  border-color: transparent;
+}
+.lp-bubble::before { bottom: -24px; margin-left: -16px; border-width: 20px 16px 0; border-top-color: var(--ink); }
+.lp-bubble::after { bottom: -14px; margin-left: -11px; border-width: 15px 11px 0; border-top-color: var(--cream); }
+
+.lp-say { margin: 0; }
+.lp-glitch { white-space: nowrap; font-family: 'Silkscreen', monospace; font-size: 0.8em; color: #8e2a44; display: inline-block; animation: lp-jit 0.18s steps(2) infinite; }
+
+.lp-robot { width: 100%; height: auto; display: block; }
+.lp-bob { animation: lp-float 3s ease-in-out infinite; }
+.lp-face-glitch { animation: lp-jit 0.18s steps(2) infinite; }
+
+/* login card */
+.lp-card {
+  box-sizing: border-box;
+  width: min(380px, 100%);
+  overflow: hidden;
+  background: var(--cream);
+  border: 4px solid var(--ink);
+  border-radius: 18px;
+  box-shadow: 6px 6px 0 var(--ink);
+  text-align: center;
+}
+.lp-card h2 {
+  margin: 0;
+  padding: 14px 16px;
+  background: var(--ink);
+  color: var(--cream);
+  font: 400 20px 'Silkscreen', monospace;
+  letter-spacing: 3px;
+}
+.lp-card-body { padding: 28px 28px 24px; }
+.lp-lead { margin: 0 0 24px; font-size: 32px; line-height: 1.15; text-wrap: balance; }
+.lp-error { margin: 0 0 14px; color: #8e2a44; font-size: 19px; line-height: 1.2; }
+.lp-error:empty { display: none; }
+.lp-submit {
+  display: block;
+  width: 100%;
+  height: 60px;
+  background: #cdebdd;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 4px 4px 0 var(--ink);
+  font: 700 20px 'Silkscreen', monospace;
+  letter-spacing: 3px;
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 0.08s, box-shadow 0.08s, background 0.15s;
+}
+.lp-submit:hover:not(:disabled) { background: #b9e2cf; transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
+.lp-submit:active:not(:disabled) { transform: translate(4px, 4px); box-shadow: 0 0 0 var(--ink); }
+.lp-submit:disabled { cursor: wait; opacity: 0.7; }
+.lp-submit:focus-visible { outline: 3px solid #7fe8d0; outline-offset: 3px; }
+.lp-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 22px 0 0;
+  font-size: 19px;
+  line-height: 1.2;
+  opacity: 0.75;
+}
+.lp-note svg { flex: none; }
+
+@keyframes lp-float { 50% { transform: translateY(-5px); } }
+@keyframes lp-jit { 50% { transform: translate(2px, -1px); } }
+@media (prefers-reduced-motion: reduce) {
+  .lp-bob, .lp-face-glitch, .lp-glitch { animation: none; }
+}

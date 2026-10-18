@@ -34,6 +34,7 @@ export default function DialogueBox({ node, onAdvance, onTypingChange, waitingFo
       const content = part.value.slice(0, amount);
       return part.glitch ? <span className="glitch" key={i}>{content}</span> : <React.Fragment key={i}>{content}</React.Fragment>;
     })}</p>
-    <span className="next" hidden={typing || waitingForChoice || !node}>▼</span>
+    <span className="leaf" aria-hidden="true" />
+    <span className="next" aria-hidden="true" hidden={typing || waitingForChoice || !node} />
   </div>;
 }

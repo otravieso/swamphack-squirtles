@@ -1,0 +1,12 @@
+/* Animations + sizing for the shared teacher robot (TeacherRobot.jsx). */
+.tr-robot { width: 100%; height: auto; display: block; overflow: visible; }
+.tr-bob { animation: tr-float 3s ease-in-out infinite; }
+.tr-face-glitch { animation: tr-jit 0.18s steps(2) infinite; }
+.tr-spin { animation: tr-rot 1s steps(8) infinite; }
+
+@keyframes tr-float { 50% { transform: translateY(-5px); } }
+@keyframes tr-jit { 50% { transform: translate(2px, -1px); } }
+@keyframes tr-rot { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .tr-bob, .tr-face-glitch, .tr-spin { animation: none; }
+}
