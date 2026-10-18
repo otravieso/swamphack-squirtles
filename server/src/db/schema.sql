@@ -14,14 +14,8 @@ CREATE TABLE IF NOT EXISTS question_sets (
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     source_files JSONB NOT NULL DEFAULT '[]'::jsonb,
-    -- The notes (typed text + text read from PDFs) the questions came from,
-    -- so "Play again" can generate fresh questions without re-uploading.
-    notes_text TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
--- Adds notes_text to databases created before it existed (safe to run again).
-ALTER TABLE question_sets ADD COLUMN IF NOT EXISTS notes_text TEXT;
 
 -- Gemini-generated questions belong to a study pack.
 CREATE TABLE IF NOT EXISTS questions (

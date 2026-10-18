@@ -4,8 +4,6 @@
 
 import { Router } from 'express';
 import { requireAuth } from '../auth/requireAuth.js';
-import { features } from '../config.js';
-import { regenerateStudyPack } from '../services/studyPacks.js';
 import {
   saveQuestionSet,
   listQuestionSets,
@@ -58,21 +56,6 @@ router.get('/:id', async (req, res, next) => {
     }
 
     res.json(set);
-  } catch (error) {
-    next(error);
-  }
-});
-
-// "Play again": replace a study pack's questions with a fresh round from Gemini,
-// generated from the notes saved with it. Takes ~5-20 s.
-router.post('/:id/regenerate', async (req, res, next) => {
-  try {
-    if (!features.gemini) {
-      return res.status(503).json({ error: 'Gemini is not set up (add GEMINI_API_KEY to .env).' });
-    }
-
-    const updated = await regenerateStudyPack(req.user.id, Number(req.params.id));
-    res.json(updated);
   } catch (error) {
     next(error);
   }
