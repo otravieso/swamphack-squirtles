@@ -11,12 +11,12 @@ import { SCENES, sceneFor, preloadScenes } from './game/scenes.js';
 import { sound } from './game/sound.js';
 import './game/game.css';
 
-// Shown on the game-over screen so the player knows what they died of.
+// Shown on the game-over screen, depending on which stat ran out.
 const DEATHS = {
-  intelligence: 'Cause of death: intelligence',
-  health: 'Cause of death: health',
-  thirst: 'Cause of death: thirst',
-  hunger: 'Cause of death: hunger',
+  intelligence: 'You died from lack of intelligence! Ya smooth brain!',
+  health: "Ya died cause your health ran out. I mean, let's not pretend those were smart decisions… The guy next to me is eating a donut right now. I’d give it to you but you don’t deserve it.",
+  thirst: 'You died of thirst. Skill issue. No water? (blue man flashes before you)',
+  hunger: "You died cause you got hungry. Hunger, more like FUNGER. Ya KNOW. Cause this IS FUN. God I'm so tired it's 4:32am please send help.",
 };
 
 // scene('404', ...) in story.js shows the "404 Exit Not Found" page instead of a background.
@@ -86,7 +86,7 @@ export default function GameApp({ script = story, hooks = {} }) {
         } else if (node.t === 'choice') {
           game.mode = 'choice';
           // On the 404 page keep "Do you want to refresh?" on screen above the Yes/No buttons.
-          publish({ choices: { kind: 'choice', options: node.options }, ...(game.scene === EXIT_SCENE ? {} : { dialogue: null }) });
+          publish({ choices: { kind: 'choice', options: node.options } });
           return;
         } else if (node.t === 'q') {
           const question = await getQuestion({ difficulty: game.aggro / 3, seen: [...game.seen] });

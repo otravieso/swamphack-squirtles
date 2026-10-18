@@ -51,7 +51,7 @@
 @keyframes e404-out{30%{filter:hue-rotate(90deg) saturate(2)}60%{filter:invert(1);transform:skewX(4deg)}100%{opacity:0;filter:brightness(3)}}
 
 /* The dialogue box and choices stay on top of the page while the script finishes */
-.vn[data-scene="exit404"] .choices{top:auto;bottom:calc(4% + 170px);transform:translateX(-50%);grid-template-columns:1fr 1fr;width:min(420px,90%)}
+.vn[data-scene="exit404"] .choices{top:auto;bottom:calc(4% + 230px);z-index:4;transform:translateX(-50%);grid-template-columns:1fr 1fr;width:min(420px,90%)}
 
 @media (max-width:700px){
   .e404-bot{right:50%;transform:translateX(50%);height:46vh;bottom:calc(22vh - 6vh)}
