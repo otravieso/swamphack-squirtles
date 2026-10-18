@@ -1,13 +1,13 @@
 // Maps the scene names used in story.js (scene('Classroom', ...)) to a background.
-// Background art lives in client/public/assets/scenes/ and is served at /assets/scenes/...
+// Background art lives in client/public/assets/Scenes/ and is served at /assets/Scenes/...
 // If an image file is missing, the CSS for that scene still paints a themed fallback,
 // so the game never shows a blank screen.
 
 export const SCENES = {
-  classroom: { key: 'classroom', label: 'Classroom', image: '/assets/scenes/classroom.png' },
-  hallway: { key: 'hallway', label: 'Hallway', image: '/assets/scenes/hallway.png' },
-  cafeteria: { key: 'cafeteria', label: 'Cafeteria', image: '/assets/scenes/cafeteria.png' },
-  library: { key: 'library', label: 'Library', image: '/assets/scenes/library.png' },
+  classroom: { key: 'classroom', label: 'Classroom', image: '/assets/Scenes/classroom.png' },
+  hallway: { key: 'hallway', label: 'Hallway', image: '/assets/Scenes/hallway.png' },
+  cafeteria: { key: 'cafeteria', label: 'Cafeteria', image: '/assets/Scenes/cafeteria.png' },
+  library: { key: 'library', label: 'Library', image: '/assets/Scenes/library.png' },
 };
 
 // Other names the script may use for the same place.

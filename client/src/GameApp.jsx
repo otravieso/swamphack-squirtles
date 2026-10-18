@@ -9,6 +9,14 @@ import { getQuestion } from './game/questionProvider.js';
 import { SCENES, sceneFor, preloadScenes } from './game/scenes.js';
 import './game/game.css';
 
+// Said by the narrator the moment a stat hits 0, before the game-over screen.
+const DEATH_LINES = {
+  intelligence: 'Your mind goes quiet... It died from lack of nural activiy...',
+  health: 'Your body gives out cause you picked some bad options numnuts',
+  thirst: 'No water? A blue figure flashes for a split second...',
+  hunger: 'Are you embarrased? I would be...',
+};
+
 // Shown on the game-over screen so the player knows what they died of.
 const DEATHS = {
   intelligence: 'Cause of death: intelligence',
@@ -45,17 +53,6 @@ export default function GameApp({ script = story, hooks = {} }) {
     game.stats.apply(effects);
     publish({ stats: game.stats.snapshot() });
   }, [publish]);
-
-  const apply = useCallback((effects = {}) => {
-    const game = runtime.current;
-    game.stats.apply(effects);
-    publish({ stats: game.stats.snapshot() });
-    if (game.stats.dead) {
-      finish('You died', DEATHS[game.stats.dead] ?? 'Your adventure has ended.');
-      return false;
-    }
-    return true;
-  }, [finish, publish]);
 
   const advance = useCallback(async () => {
     const game = runtime.current;
@@ -94,11 +91,20 @@ export default function GameApp({ script = story, hooks = {} }) {
           game.mode = 'dialogue';
           publish({ dialogue: { t: 'say', who: 'narrator', text: node.text }, choices: null });
           return;
-        } else if (node.t === '_checkDeath') {
-          if (!apply({})) return; // a stat hit 0 during the decision/answer above -> game over now
-        } else if (node.t === '_tick') {
-          game.stats.tick();
-          if (!apply({})) return;
+        } else if (node.t === '_checkDeath' || node.t === '_tick') {
+          if (node.t === '_tick') game.stats.tick();
+          publish({ stats: game.stats.snapshot() });
+          const cause = game.stats.dead;
+          if (cause) {
+            // A stat hit 0: say what killed you first, then the game-over screen on the next tap.
+            game.queue = [{ t: '_die', cause }];
+            game.mode = 'dialogue';
+            publish({ dialogue: { t: 'say', who: 'narrator', text: DEATH_LINES[cause] ?? 'Your adventure has ended.' }, choices: null });
+            return;
+          }
+        } else if (node.t === '_die') {
+          finish('You died', DEATHS[node.cause] ?? 'Your adventure has ended.');
+          return;
         } else if (node.t === 'end') {
           publish({ dialogue: { t: 'say', who: 'narrator', text: node.text } });
           finish('Chapter complete', node.text);
@@ -114,7 +120,7 @@ export default function GameApp({ script = story, hooks = {} }) {
         finish('Gameplay error', error?.message ?? 'Something went wrong.');
       }
     }
-  }, [apply, changeStats, finish, publish]);
+  }, [changeStats, finish, publish]);
 
   const restart = useCallback(() => {
     generation.current += 1;
