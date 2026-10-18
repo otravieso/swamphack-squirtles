@@ -208,6 +208,9 @@ export const story = [
   scene('Library', 1),
   T('IM GOING TO TEAR YOU UNGREATFUL LITTLE &#%$& APART'),
   N('You open the door and attempt to pass through the door. You bump into what appears to be a screen. You read…'),
+
+  // ── 404 screen (components/ExitNotFound.jsx) ────────────────────────
+  scene('404', 1),
   N('404 Exit Not Found…'),
   N('Do you want to refresh?'),
   choice(
