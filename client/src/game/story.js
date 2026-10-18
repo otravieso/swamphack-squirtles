@@ -22,6 +22,7 @@ export const story = [
     [T('Seems we have a lot of work ahead of us.')],
   ),
   N("You look around for some water. You feel on the verge of passing out. There is an old plastic water bottle by the window. It looks like it’s been by the window longer than you have been alive. There is the sink dripping in the corner, you think that if it's dripping the plumbing must still work. There is also some condensation on your desk that you could lick… you weirdo."),
+  N("So... whatcha gonna do?"),
   choice(
     opt('Go to the window and drink from the water bottle.', { health: -1 },
       N("You spit the water out. It tastes of mold and morning breath. But maybe that's just you.")),
@@ -33,17 +34,17 @@ export const story = [
       N('Be more decisive. Take care of yourself. It might kill ya if you don’t. But maybe you have bigger issues to worry about…')),
   ),
   T('Hey Hey HEY! Get back to your seat young man! You don’t want the ruler now do you?'),
-  N('You feel your tush aching… You think nothing of it'),
+  N('You feel your tush aching… You think nothing of it.'),
   q(
-    [T('So you do have something in that noggin of yours')],
+    [T('So you do have something in that noggin of yours.')],
     [T("DID YOU JUST *screeching fuse bursts* You'll get it next time…")],
   ),
-  N('You want to get some food. You look around but the only thing you see in this classroom is that looks edib…eatable is a a pile of mush on the teacher’s desks you think might have been an apple. You head down to the cafeteria'),
-  T('Woah woah woah where do you think you\'re going?'),
-  Y("I think I'll learn better if I eat something. I'm having trouble thinking straight"),
-  T('I guess every student needs a lunch break. But before that answer one more question'),
+  N('You want to get some food. You look around but the only thing you see in this classroom is that looks edib…eatable is a a pile of mush on the teacher’s desks you think might have been an apple. You head down to the cafeteria.'),
+  T('Woah, woah, woah, where do you think you\'re going?'),
+  Y("I think I'll learn better if I eat something. I'm having trouble thinking straight."),
+  T('I guess every student needs a lunch break. But before that answer one more question.'),
   q(
-    [T('Good Good Good You might actually see the light of *blehaheuosube* the cafeteria!!!')],
+    [T('Good, Good, Good! You might actually see the light of *blehaheuosube* the cafeteria!!!')],
     [T('YOU BAS *grechaalednbelb* Every student needs some food. Maybe that will improve your pathetic performance.')],
   ),
 
@@ -55,7 +56,7 @@ export const story = [
     opt('Carefully descend the stairs, testing each step.', {},
       N("You take each step slowly, gripping what remains of the railing. The stairs creak like an old man's knees, but you make it down in one piece. You feel a little proud of yourself. No, that’s not the feeling. You feel pathetic. I guess you kinda are.")),
     opt('Run down the stairs as fast as possible.', { health: -2 },
-      N('You sprint down the stairs. Halfway through, your foot catches a broken step. You tumble the rest of the way down. The stairs fall apart behind you. On the bright side, you achieved something. Even if it was probably the worst way to do so')),
+      N('You sprint down the stairs. Halfway through, your foot catches a broken step. You tumble the rest of the way down. The stairs fall apart behind you. On the bright side, you achieved something. Even if it was probably the worst way to do so.')),
     opt('Climb out the window and try to reach a lower ledge.', { hunger: -1 },
       N('You squeeze through the window and immediately regret every decision that has led you here. You start thinking that maybe you are stupid. After a brief, humiliating struggle, you manage to grab a maintenance ledge and climb back inside through a lower window. Your arms feel like jelly. Mhhhmmmm, Jelly. You get really hungry….')),
     opt('Use the broken railing as a makeshift ladder.', { thirst: -1 },
@@ -100,20 +101,20 @@ export const story = [
 
   // ── Cafeteria: drinks ───────────────────────────────────────────────
   N('You are feeling parched again. Maybe all that food made you thirsty. You look around and see a soda machine with cups next to it. You go to grab a cup.'),
-  T("AY AY AY. No soda for students. OR ELSE I’LL Why don't you go to that machine instead."),
+  T("AY AY AY. No soda for students. OR ELSE I’LL!... Why don't you go to that machine instead."),
   N('You look to the right and see a shoddily built attempt at a soda machine. Emphasis on attempt…'),
   T('BUT FIRST, ONE MORE QUESTION!!!!'),
   q(
-    [T('Yippi go get some you deserve it')],
-    [T('You might be a lost cause')],
+    [T('Yippi go get some you deserve it.')],
+    [T('You might be a lost cause.')],
   ),
   N("You look at the machine. You trust it about as far as you can throw it. FYI you are weak as hecky. You look at the options. They don't fill you with confidence."),
   choice(
     opt('Gatorade. Oh, how fun!', {},
       N('Heck yeah')),
     opt('Pep-C, This seems vaguely familiar. But you can’t exactly CCCCCCCC why', {},
-      N('It fills you with energy. And gas…BUUUURP')),
-    opt('Robo fuel', { health: -1 },
+      N('It fills you with energy. And gas…BUUUURP.')),
+    opt('Robo fuel.', { health: -1 },
       N("It's dark and thick. The viscosity resembles molasses. The color is as maroon as cranberries. It tastes vaguely metallic.")),
     opt('Suspicious nugget, wait what?!?!?!?', { thirst: -1 },
       N("A single nugget is dispensed. You press the trigger again in hopes of getting some more at least but nothing happens. You're still thirsty and you try to go for another drink but Professor Didactic stops you.")),
@@ -121,7 +122,7 @@ export const story = [
 
   // ── The Professor glitches ──────────────────────────────────────────
   scene('Cafeteria', 0.75),
-  T('TIME FOR ANOTHER QUESajonosrnpirn'),
+  T('TIME FOR ANOTHER QUESajonosrnpirn.'),
   N('(silence)'),
   N('You hear a screech'),
   T('SCREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE KHBWOINRWONWI'),

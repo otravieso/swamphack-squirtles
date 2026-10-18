@@ -83,7 +83,7 @@ export default function GameApp({ script = story, hooks = {} }) {
         } else if (node.t === 'choice') {
           game.mode = 'choice';
           // On the 404 page keep "Do you want to refresh?" on screen above the Yes/No buttons.
-          publish({ choices: { kind: 'choice', options: node.options }, ...(game.scene === EXIT_SCENE ? {} : { dialogue: null }) });
+          publish({ choices: { kind: 'choice', options: node.options } });
           return;
         } else if (node.t === 'q') {
           const question = await getQuestion({ difficulty: game.aggro / 3, seen: [...game.seen] });
