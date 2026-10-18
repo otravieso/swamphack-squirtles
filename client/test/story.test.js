@@ -96,7 +96,7 @@ test('perfect run: safe choices + every answer right = full stats and max score'
 });
 
 test('health can be lost: water bottle, running the stairs, egg salad, robo fuel', () => {
-  const r = play({ pick: byLabel('Go to the window', 'Run down', 'EggSalad', 'Robo fuel'), answer: () => true });
+  const r = play({ pick: byLabel('Go to the window', 'Run down', 'Egg salad', 'Robo fuel'), answer: () => true });
   assert.equal(r.outcome, 'died');
   assert.equal(r.cause, 'health');
   assert.ok(r.lastShown.startsWith("It's dark and thick."), 'robo fuel narration shown before game over: ' + r.lastShown);
@@ -116,7 +116,7 @@ test('thirst can also run out at the drinks machine (the nugget drink)', () => {
 });
 
 test('hunger can be lost: the window ledge plus the egg salad', () => {
-  const r = play({ pick: byLabel('Get to the sink', 'Climb out the window', 'EggSalad'), answer: () => true });
+  const r = play({ pick: byLabel('Get to the sink', 'Climb out the window', 'Egg salad'), answer: () => true });
   assert.equal(r.outcome, 'died');
   assert.equal(r.cause, 'hunger');
   assert.ok(r.lastShown.startsWith('You died. Or rather'), 'egg salad narration shown before game over: ' + r.lastShown);
