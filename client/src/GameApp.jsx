@@ -20,7 +20,7 @@ const DEATHS = {
 
 // scene('404', ...) in story.js shows the "404 Exit Not Found" page instead of a background.
 const EXIT_SCENE = 'exit404';
-const REFRESH_DELAY_MS = 1600; // how long "REFRESHING…" shows after choosing Yes
+const REFRESH_DELAY_MS = 1600; // shortest time "REFRESHING…" shows after choosing Yes (longer while new questions are written)
 
 const initialView = () => ({ place: '', scene: null, aggro: 0, lastChoice: null, refreshing: false, dialogue: null, choices: null, ending: null, stats: null });
 
@@ -135,28 +135,33 @@ export default function GameApp({ script = story, hooks = {} }) {
 
   useEffect(() => { preloadScenes(); }, []);
 
-  // "Play again": let the app swap in new questions first (hooks.onRestart may be async),
-  // then restart. Extra clicks while waiting are ignored.
+  // Start a new run with fresh questions: let the app swap in new questions first
+  // (hooks.onRestart may be async), wait at least `minDelayMs`, then restart.
+  // Used by Play again (after dying) and by the 404 screen's refresh (after winning).
+  // Extra clicks while waiting are ignored.
   const restarting = useRef(false);
-  const playAgain = useCallback(async () => {
+  const replay = useCallback(async (minDelayMs = 0) => {
     if (restarting.current) return;
     restarting.current = true;
     try {
-      await hooksRef.current.onRestart?.();
-    } catch (error) {
-      console.warn('onRestart hook failed:', error);
+      await Promise.all([
+        Promise.resolve(hooksRef.current.onRestart?.()).catch((error) => console.warn('onRestart hook failed:', error)),
+        new Promise((resolve) => window.setTimeout(resolve, minDelayMs)),
+      ]);
     } finally {
       restarting.current = false;
     }
     if (runtime.current) restart(); // skip if the player left the game meanwhile
   }, [restart]);
+  const playAgain = useCallback(() => replay(0), [replay]);
 
   useEffect(() => {
     restart();
     return () => { generation.current += 1; runtime.current = null; };
   }, [restart]);
 
-  // End of the script on the 404 page: "Do you want to refresh?" → Yes refreshes (restarts).
+  // End of the script on the 404 page: "Do you want to refresh?" → Yes refreshes (restarts
+  // with fresh questions; "REFRESHING…" stays up while they're written).
   // No leaves the player on the page; the REFRESH sign restarts whenever they're ready.
   const atExit = view.scene === EXIT_SCENE;
   const beatGame = atExit && view.ending?.title === 'Chapter complete';
@@ -165,10 +170,8 @@ export default function GameApp({ script = story, hooks = {} }) {
     if (beatGame && view.lastChoice === 'Yes' && !view.refreshing) refresh();
   }, [beatGame, view.lastChoice, view.refreshing, refresh]);
   useEffect(() => {
-    if (!view.refreshing) return undefined;
-    const timer = window.setTimeout(restart, REFRESH_DELAY_MS);
-    return () => window.clearTimeout(timer);
-  }, [view.refreshing, restart]);
+    if (view.refreshing) void replay(REFRESH_DELAY_MS);
+  }, [view.refreshing, replay]);
 
   const next = useCallback(() => {
     const game = runtime.current;
