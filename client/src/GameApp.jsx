@@ -6,6 +6,7 @@ import GameOver from './components/GameOver.jsx';
 import { story } from './game/story.js';
 import { Stats } from './game/stats.js';
 import { getQuestion } from './game/questionProvider.js';
+import { SCENES, sceneFor, preloadScenes } from './game/scenes.js';
 import './game/game.css';
 
 // Shown on the game-over screen so the player knows what they died of.
@@ -16,7 +17,7 @@ const DEATHS = {
   hunger: 'Cause of death: hunger',
 };
 
-const initialView = () => ({ place: '', aggro: 0, dialogue: null, choices: null, ending: null, stats: null });
+const initialView = () => ({ place: '', scene: null, aggro: 0, dialogue: null, choices: null, ending: null, stats: null });
 
 // This component owns the game state; no innerHTML, document.createElement or manual event listeners.
 export default function GameApp({ script = story, hooks = {} }) {
@@ -65,7 +66,9 @@ export default function GameApp({ script = story, hooks = {} }) {
       while (game.queue.length && generation.current === token) {
         const node = game.queue.shift();
         if (node.t === 'scene') {
-          publish({ place: node.name, aggro: Math.max(0, Math.min(3, Math.round(node.aggro * 3))) });
+          // Switch the background to match where the dialogue is happening.
+          const where = sceneFor(node.name);
+          publish({ place: node.name, scene: where?.key ?? null, aggro: Math.max(0, Math.min(3, Math.round(node.aggro * 3))) });
         } else if (node.t === 'say') {
           game.mode = 'dialogue';
           publish({ dialogue: { ...node }, choices: null });
@@ -122,6 +125,8 @@ export default function GameApp({ script = story, hooks = {} }) {
     queueMicrotask(() => { if (runtime.current?.mode === 'ready') void advance(); });
   }, [script, advance]);
 
+  useEffect(() => { preloadScenes(); }, []);
+
   useEffect(() => {
     restart();
     return () => { generation.current += 1; runtime.current = null; };
@@ -165,8 +170,16 @@ export default function GameApp({ script = story, hooks = {} }) {
 
   const debug = new URLSearchParams(window.location.search).has('debug');
   const choices = view.choices;
-  return <div className="vn" data-aggro={view.ending?.title === 'You died' ? 3 : view.aggro}>
-    <div className="place">{view.place}</div>
+  return <div className="vn" data-scene={view.scene ?? 'none'} data-aggro={view.ending?.title === 'You died' ? 3 : view.aggro}>
+    {/* One layer per location; only the active one is visible, so changing scene cross-fades. */}
+    <div className="scenery" aria-hidden="true">
+      {Object.values(SCENES).map(({ key, image }) => (
+        <div key={key} className={`scenery-layer scenery-${key}${view.scene === key ? ' is-active' : ''}`}
+          style={{ '--scene-img': `url("${image}")` }} />
+      ))}
+      <div className="scenery-tint" />
+    </div>
+    <div className="place" hidden={!view.place}>{view.place}</div>
     <Robot talking={view.dialogue?.who === 'teacher' && typing && !view.ending} />
     {choices && <ChoiceBox labels={choices.kind === 'question' ? choices.labels : choices.options.map(o => o.label)} onSelect={choose} />}
     <DialogueBox node={view.dialogue} waitingForChoice={Boolean(choices) || Boolean(view.ending)} onAdvance={next} onTypingChange={setTyping} />
