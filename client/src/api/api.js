@@ -55,4 +55,12 @@ export const api = {
    *   file.data = the PDF as base64 (max 15 MB)
    */
   generateQuestions: (input) => request('/notes', { method: 'POST', body: input }),
+
+  /**
+   * "Play again": Gemini writes a fresh round of questions from the notes saved with this
+   * set, and they replace the old questions. Returns the updated set (same id, same shape
+   * as getQuestionSet). Takes ~5–20 s. Fails with a message if the set has no saved notes
+   * (sets made before notes were stored); the old questions are kept on any failure.
+   */
+  regenerateQuestionSet: (id) => request(`/question-sets/${id}/regenerate`, { method: 'POST' }),
 };

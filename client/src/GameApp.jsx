@@ -3,6 +3,7 @@ import Robot from './components/Robot.jsx';
 import DialogueBox from './components/DialogueBox.jsx';
 import ChoiceBox from './components/ChoiceBox.jsx';
 import GameOver from './components/GameOver.jsx';
+import ExitNotFound from './components/ExitNotFound.jsx';
 import { story } from './game/story.js';
 import { Stats } from './game/stats.js';
 import { getQuestion } from './game/questionProvider.js';
@@ -25,7 +26,11 @@ const DEATHS = {
   hunger: 'Cause of death: hunger',
 };
 
-const initialView = () => ({ place: '', scene: null, aggro: 0, dialogue: null, choices: null, ending: null, stats: null });
+// scene('404', ...) in story.js shows the "404 Exit Not Found" page instead of a background.
+const EXIT_SCENE = 'exit404';
+const REFRESH_DELAY_MS = 1600; // how long "REFRESHING…" shows after choosing Yes
+
+const initialView = () => ({ place: '', scene: null, aggro: 0, lastChoice: null, refreshing: false, dialogue: null, choices: null, ending: null, stats: null });
 
 // This component owns the game state; no innerHTML, document.createElement or manual event listeners.
 export default function GameApp({ script = story, hooks = {} }) {
@@ -65,14 +70,17 @@ export default function GameApp({ script = story, hooks = {} }) {
         if (node.t === 'scene') {
           // Switch the background to match where the dialogue is happening.
           const where = sceneFor(node.name);
-          publish({ place: node.name, scene: where?.key ?? null, aggro: Math.max(0, Math.min(3, Math.round(node.aggro * 3))) });
+          const scene = node.name === '404' ? EXIT_SCENE : where?.key ?? null;
+          game.scene = scene;
+          publish({ place: node.name, scene, aggro: Math.max(0, Math.min(3, Math.round(node.aggro * 3))) });
         } else if (node.t === 'say') {
           game.mode = 'dialogue';
           publish({ dialogue: { ...node }, choices: null });
           return;
         } else if (node.t === 'choice') {
           game.mode = 'choice';
-          publish({ choices: { kind: 'choice', options: node.options }, dialogue: null });
+          // On the 404 page keep "Do you want to refresh?" on screen above the Yes/No buttons.
+          publish({ choices: { kind: 'choice', options: node.options }, ...(game.scene === EXIT_SCENE ? {} : { dialogue: null }) });
           return;
         } else if (node.t === 'q') {
           const question = await getQuestion({ difficulty: game.aggro / 3, seen: [...game.seen] });
@@ -133,10 +141,40 @@ export default function GameApp({ script = story, hooks = {} }) {
 
   useEffect(() => { preloadScenes(); }, []);
 
+  // "Play again": let the app swap in new questions first (hooks.onRestart may be async),
+  // then restart. Extra clicks while waiting are ignored.
+  const restarting = useRef(false);
+  const playAgain = useCallback(async () => {
+    if (restarting.current) return;
+    restarting.current = true;
+    try {
+      await hooksRef.current.onRestart?.();
+    } catch (error) {
+      console.warn('onRestart hook failed:', error);
+    } finally {
+      restarting.current = false;
+    }
+    if (runtime.current) restart(); // skip if the player left the game meanwhile
+  }, [restart]);
+
   useEffect(() => {
     restart();
     return () => { generation.current += 1; runtime.current = null; };
   }, [restart]);
+
+  // End of the script on the 404 page: "Do you want to refresh?" → Yes refreshes (restarts).
+  // No leaves the player on the page; the REFRESH sign restarts whenever they're ready.
+  const atExit = view.scene === EXIT_SCENE;
+  const beatGame = atExit && view.ending?.title === 'Chapter complete';
+  const refresh = useCallback(() => publish({ refreshing: true }), [publish]);
+  useEffect(() => {
+    if (beatGame && view.lastChoice === 'Yes' && !view.refreshing) refresh();
+  }, [beatGame, view.lastChoice, view.refreshing, refresh]);
+  useEffect(() => {
+    if (!view.refreshing) return undefined;
+    const timer = window.setTimeout(restart, REFRESH_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [view.refreshing, restart]);
 
   const next = useCallback(() => {
     const game = runtime.current;
@@ -157,7 +195,7 @@ export default function GameApp({ script = story, hooks = {} }) {
       const option = view.choices?.options?.[index];
       if (!option) return;
       hooksRef.current.onChoice?.({ label: option.label, fx: option.fx });
-      publish({ choices: null });
+      publish({ choices: null, lastChoice: option.label });
       changeStats(option.fx);
       game.queue.unshift(...(option.then ?? []), { t: '_checkDeath' });
     } else if (game.mode === 'question') {
@@ -176,7 +214,9 @@ export default function GameApp({ script = story, hooks = {} }) {
 
   const debug = new URLSearchParams(window.location.search).has('debug');
   const choices = view.choices;
-  return <div className="vn" data-scene={view.scene ?? 'none'} data-aggro={view.ending?.title === 'You died' ? 3 : view.aggro}>
+  // The 404 page is calm: no rage tint or scanlines there.
+  const aggro = atExit ? 0 : view.ending?.title === 'You died' ? 3 : view.aggro;
+  return <div className="vn" data-scene={view.scene ?? 'none'} data-aggro={aggro}>
     {/* One layer per location; only the active one is visible, so changing scene cross-fades. */}
     <div className="scenery" aria-hidden="true">
       {Object.values(SCENES).map(({ key, image }) => (
@@ -185,11 +225,12 @@ export default function GameApp({ script = story, hooks = {} }) {
       ))}
       <div className="scenery-tint" />
     </div>
-    <div className="place" hidden={!view.place}>{view.place}</div>
-    <Robot talking={view.dialogue?.who === 'teacher' && typing && !view.ending} />
+    <div className="place" hidden={!view.place || atExit}>{view.place}</div>
+    {atExit && <ExitNotFound canRefresh={beatGame} refreshing={view.refreshing} onRefresh={refresh} />}
+    {!atExit && <Robot talking={view.dialogue?.who === 'teacher' && typing && !view.ending} />}
     {choices && <ChoiceBox labels={choices.kind === 'question' ? choices.labels : choices.options.map(o => o.label)} onSelect={choose} />}
-    <DialogueBox node={view.dialogue} waitingForChoice={Boolean(choices) || Boolean(view.ending)} onAdvance={next} onTypingChange={setTyping} />
+    {!beatGame && <DialogueBox node={view.dialogue} waitingForChoice={Boolean(choices) || Boolean(view.ending)} onAdvance={next} onTypingChange={setTyping} />}
     {debug && view.stats && <div className="debug">{Object.entries(view.stats).map(([k, v]) => `${k}:${v}`).join('  ')}</div>}
-    {view.ending && <GameOver {...view.ending} onRestart={restart} />}
+    {view.ending && !beatGame && <GameOver {...view.ending} onRestart={restart} />}
   </div>;
 }

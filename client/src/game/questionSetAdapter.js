@@ -29,7 +29,10 @@ export function makeQuestionSetProvider(questionSet) {
     pool.find((q) => !seen.includes(q.id)) ?? pool[Math.floor(Math.random() * pool.length)];
 }
 
-/** Make the game ask questions from this saved set. Call before showing <GameApp />. */
+/**
+ * Make the game ask questions from this saved set. Call before showing <GameApp />,
+ * and again with the regenerated set when the player presses Play again.
+ */
 export function loadQuestionSetIntoGame(questionSet) {
   setQuestionProvider(makeQuestionSetProvider(questionSet));
 }

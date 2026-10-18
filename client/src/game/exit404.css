@@ -1,0 +1,60 @@
+/* "404 Exit Not Found…" ending page (components/ExitNotFound.jsx). */
+@import url('https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Itim&display=swap');
+
+.e404{--e404-bg:#d9d0ec;--e404-ink:#3a2f4d;--e404-shell:#aec994;--e404-side:#8fae78;--e404-floor:#c9a483;
+  position:absolute;inset:0;z-index:1;overflow:hidden;color:var(--e404-ink);
+  background:radial-gradient(120% 90% at 30% 20%,#e6dff4 0%,var(--e404-bg) 60%,#cdc2e4 100%);
+  animation:e404-in .5s ease-out}
+@keyframes e404-in{from{opacity:0;filter:hue-rotate(40deg) saturate(2)}to{opacity:1}}
+
+/* Big pixel "404" with teal/pink offset glitch */
+.e404-copy{position:absolute;left:clamp(16px,6vw,90px);top:clamp(24px,9vh,90px);z-index:2}
+.e404-code{position:relative;margin:0;font:400 clamp(64px,11.5vw,156px)/1 Silkscreen,VT323,monospace;letter-spacing:-.02em;
+  color:var(--e404-ink);text-shadow:-3px 0 #7fd6c6,3px 3px #f2a7b5}
+.e404-code::after{content:attr(data-text);position:absolute;inset:0;color:var(--e404-ink);
+  clip-path:inset(42% 0 44% 0);transform:translateX(6px);animation:e404-glitch 2.6s steps(1) infinite}
+@keyframes e404-glitch{0%,86%,100%{transform:none;clip-path:inset(100% 0 0 0)}88%{transform:translateX(8px);clip-path:inset(30% 0 52% 0)}
+  92%{transform:translateX(-6px);clip-path:inset(62% 0 18% 0)}}
+.e404-msg{margin:.6em 0 0 .2em;font:clamp(24px,3.2vw,40px) Itim,Quicksand,sans-serif}
+
+/* Broken REFRESH sign = play-again button */
+.e404-refresh{position:absolute;top:clamp(84px,14vh,130px);right:clamp(16px,6vw,90px);z-index:4;
+  padding:12px 30px;font:400 clamp(16px,1.8vw,22px) Silkscreen,VT323,monospace;letter-spacing:.04em;
+  color:#c9bfe0;background:#3d3352;border:3px solid #241d33;border-radius:8px;transform:rotate(3deg);
+  box-shadow:0 6px 0 #241d33,0 10px 18px #0003;cursor:pointer;transition:transform .15s,color .15s}
+.e404-plank{position:absolute;left:-14px;right:-26px;top:-22px;height:14px;background:#f2a7b5;border:3px solid #241d33;
+  border-radius:3px;transform:rotate(-9deg);transform-origin:left}
+.e404-refresh:not(:disabled){animation:e404-pulse 1.4s ease-in-out infinite}
+.e404-refresh:not(:disabled):hover,.e404-refresh:focus-visible{color:#fff;transform:rotate(0) scale(1.05);outline:none}
+.e404-refresh:disabled{cursor:default;opacity:.85}
+@keyframes e404-pulse{50%{box-shadow:0 6px 0 #241d33,0 0 0 6px #7fd6c655,0 10px 18px #0003}}
+
+.e404-floor{position:absolute;left:0;right:0;bottom:0;height:22vh;background:var(--e404-floor);border-top:4px solid #3a2f4d}
+
+/* Robot: y=400 in the SVG sits on the floor line */
+.e404-bot{position:absolute;z-index:1;right:clamp(0px,8vw,140px);bottom:calc(22vh - 8.1vh);height:62vh;width:auto;max-width:96vw;overflow:visible}
+.e404-ink > :not([stroke]){stroke:#2f2a3a;stroke-width:4;stroke-linejoin:round}
+.e404-head{transform-box:view-box;transform-origin:262px 240px;animation:e404-twitch 3.2s infinite}
+@keyframes e404-twitch{0%,90%,100%{transform:none}92%{transform:rotate(-3deg) translateX(-3px)}95%{transform:rotate(2deg)}}
+.e404-eye{animation:e404-flick 1.8s steps(1) infinite}
+@keyframes e404-flick{0%,70%,100%{opacity:1}72%,78%{opacity:.25}}
+.e404-arm{transform-box:view-box;transform-origin:356px 282px;animation:e404-float 2.4s ease-in-out infinite alternate}
+@keyframes e404-float{to{transform:translate(4px,-8px) rotate(-4deg)}}
+.e404-spark{animation:e404-spark .5s steps(1) infinite}.e404-spark.delay{animation-delay:.25s}
+@keyframes e404-spark{50%{opacity:0}}
+.gear{transform-box:view-box}
+.gear.spin{animation:e404-spin 6s linear infinite}.gear.spin-rev{animation:e404-spin 4s linear infinite reverse}
+@keyframes e404-spin{to{transform:rotate(360deg)}}
+
+/* Choosing "Yes": glitch out, then the game restarts */
+.e404.is-refreshing{animation:e404-out 1.6s ease-in forwards}
+@keyframes e404-out{30%{filter:hue-rotate(90deg) saturate(2)}60%{filter:invert(1);transform:skewX(4deg)}100%{opacity:0;filter:brightness(3)}}
+
+/* The dialogue box and choices stay on top of the page while the script finishes */
+.vn[data-scene="exit404"] .choices{top:auto;bottom:calc(4% + 170px);transform:translateX(-50%);grid-template-columns:1fr 1fr;width:min(420px,90%)}
+
+@media (max-width:700px){
+  .e404-bot{right:50%;transform:translateX(50%);height:46vh;bottom:calc(22vh - 6vh)}
+  .e404-refresh{top:auto;bottom:calc(22vh + 12px);right:16px}
+}
+@media (prefers-reduced-motion:reduce){.e404 *,.e404{animation:none!important}}
