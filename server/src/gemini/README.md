@@ -13,7 +13,8 @@ Gemini API code (key from Google AI Studio, stored in `.env` as `GEMINI_API_KEY`
   - fill-in-the-blank: a sentence from the notes with a key term replaced by `_____`, plus 4 options
     (the term and 3 look-/sound-alikes or other terms from the notes)
 - `extractNotesText.js`: `extractNotesText({ mimeType, data })` → plain text from a PDF
-  (Gemini reads it directly; works for scanned/handwritten pages). Its output is fed to `generateQuestions()`.
+  (Gemini reads it directly; works for scanned/handwritten pages). Only used when our own reader,
+  `server/src/pdf/readPdfText.js`, finds too little text in the PDF. Its output is fed to `generateQuestions()`.
 - Try it on its own: `node server/test-gemini.js`
 
 It's called by `server/src/services/studyPacks.js`, which saves the result to the database

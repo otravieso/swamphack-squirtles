@@ -127,6 +127,22 @@ export default function GameApp({ script = story, hooks = {} }) {
 
   useEffect(() => { preloadScenes(); }, []);
 
+  // "Play again": let the app swap in new questions first (hooks.onRestart may be async),
+  // then restart. Extra clicks while waiting are ignored.
+  const restarting = useRef(false);
+  const playAgain = useCallback(async () => {
+    if (restarting.current) return;
+    restarting.current = true;
+    try {
+      await hooksRef.current.onRestart?.();
+    } catch (error) {
+      console.warn('onRestart hook failed:', error);
+    } finally {
+      restarting.current = false;
+    }
+    if (runtime.current) restart(); // skip if the player left the game meanwhile
+  }, [restart]);
+
   useEffect(() => {
     restart();
     return () => { generation.current += 1; runtime.current = null; };
@@ -184,6 +200,6 @@ export default function GameApp({ script = story, hooks = {} }) {
     {choices && <ChoiceBox labels={choices.kind === 'question' ? choices.labels : choices.options.map(o => o.label)} onSelect={choose} />}
     <DialogueBox node={view.dialogue} waitingForChoice={Boolean(choices) || Boolean(view.ending)} onAdvance={next} onTypingChange={setTyping} />
     {debug && view.stats && <div className="debug">{Object.entries(view.stats).map(([k, v]) => `${k}:${v}`).join('  ')}</div>}
-    {view.ending && <GameOver {...view.ending} onRestart={restart} />}
+    {view.ending && <GameOver {...view.ending} onRestart={playAgain} />}
   </div>;
 }

@@ -1,12 +1,14 @@
 // Glue between the Gemini code and the database:
-//   notes text ─────────────────────────────┐
-//   PDF → extractNotesText() (Gemini reads it) ┴→ generateQuestions() → saveQuestionSet()
+//   notes text ─────────────────────────────────────────────────┐
+//   PDF → readPdfText() on our server (free)                      ├→ generateQuestions() → saveQuestionSet()
+//         └ scanned/no text? → extractNotesText() (Gemini reads it) ┘
 //
 // "Play again" (regenerateStudyPack): saved notes → generateQuestions() → replaceQuestions()
 //
 // The Gemini functions are only CALLED from here, never modified. They're loaded
 // lazily so the rest of the server (and the tests) run without the Gemini package or key.
 import { saveQuestionSet, getQuestionSet, getNotesText, replaceQuestions } from '../db/questionSets.js';
+import { looksScanned } from '../pdf/readPdfText.js';
 
 export const MAX_NOTES_CHARS = 100_000; // ~25k words; keeps requests fast and cheap
 export const MAX_FILE_BYTES = 15 * 1024 * 1024; // 15 MB per PDF
@@ -15,6 +17,11 @@ export const SUPPORTED_FILE_TYPES = ['application/pdf'];
 const defaultGenerate = async (notes, options) => {
   const { generateQuestions } = await import('../gemini/generateQuestions.js');
   return generateQuestions(notes, options);
+};
+
+const defaultReadPdf = async (base64) => {
+  const { readPdfText } = await import('../pdf/readPdfText.js');
+  return readPdfText(base64);
 };
 
 const defaultExtract = async (file) => {
@@ -28,16 +35,39 @@ function httpError(status, message) {
   return err;
 }
 
+/** "84670" seconds → "about 24 hours", etc. */
+function formatWait(seconds) {
+  if (seconds < 90) return `${Math.max(1, Math.ceil(seconds))} seconds`;
+  if (seconds < 90 * 60) return `${Math.round(seconds / 60)} minutes`;
+  return `about ${Math.round(seconds / 3600)} hours`;
+}
+
+/** The player-facing message for a Gemini usage-limit error (HTTP 429). */
+export function quotaMessage(raw) {
+  const delay = raw.match(/retryDelay\W+(\d+(?:\.\d+)?)s/i);
+  const seconds = delay ? Number(delay[1]) : null;
+  if (/PerDay/i.test(raw)) {
+    const when = seconds ? ` It resets in ${formatWait(seconds)}.` : ' It resets tomorrow.';
+    return `Gemini's free daily limit for this project is used up.${when} ` +
+      'To keep going now, use a GEMINI_API_KEY from a different Google project or turn on billing in Google AI Studio.';
+  }
+  return seconds
+    ? `Too many Gemini requests right now. Try again in ${formatWait(seconds)}.`
+    : 'Too many Gemini requests right now. Wait a minute and try again.';
+}
+
 /** Turn a Gemini/SDK failure into a clean error for the game. */
 function geminiError(err, action) {
-  console.error(`Gemini error while ${action}:`, err);
   const raw = String(err?.message ?? err);
-  const busy = /429|quota|rate/i.test(raw);
+  if (/\b429\b|RESOURCE_EXHAUSTED|quota|rate.?limit/i.test(raw)) {
+    const message = quotaMessage(raw);
+    console.error(`Gemini usage limit while trying to ${action}: ${message}`);
+    return httpError(429, message);
+  }
+  console.error(`Gemini error while trying to ${action}:`, err);
   // Include Gemini's own reason (trimmed) so problems can be diagnosed from the game/test page.
   const reason = raw.replace(/\s+/g, ' ').slice(0, 300);
-  return busy
-    ? httpError(503, 'Gemini is busy (rate limit). Wait a moment and try again.')
-    : httpError(502, `Gemini could not ${action}. Reason: ${reason}`);
+  return httpError(502, `Gemini could not ${action}. Reason: ${reason}`);
 }
 
 /** True if a question from Gemini has everything the game needs. */
@@ -83,7 +113,7 @@ function validateFile(file) {
 export async function createStudyPackFromNotes(
   userId,
   input,
-  { generate = defaultGenerate, extract = defaultExtract, save = saveQuestionSet } = {}
+  { generate = defaultGenerate, extract = defaultExtract, readPdf = defaultReadPdf, save = saveQuestionSet } = {}
 ) {
   let notes = typeof input?.notes === 'string' ? input.notes.trim() : '';
   const sourceFiles = Array.isArray(input?.sourceFiles)
@@ -95,14 +125,26 @@ export async function createStudyPackFromNotes(
     throw httpError(413, `Notes are too long (max ${MAX_NOTES_CHARS.toLocaleString()} characters).`);
   }
 
-  // PDF → text with Gemini, then treat it like any other notes.
+  // PDF → text, then treat it like any other notes. Read it on our server first (free);
+  // only scanned/image PDFs, or a failure, use a Gemini request.
   if (input?.file) {
     const file = validateFile(input.file);
-    let text;
+    let text = '';
+    let local = null;
     try {
-      text = String((await extract({ mimeType: file.mimeType, data: file.data })) ?? '').trim();
+      local = await readPdf(file.data);
     } catch (err) {
-      throw geminiError(err, 'read that PDF');
+      console.warn(`Couldn't read "${file.name}" on the server (${err.message}); asking Gemini instead.`);
+    }
+    if (local && !looksScanned(local)) {
+      text = local.text.trim();
+      console.log(`Read "${file.name}" on the server (${local.pages} pages), no Gemini request needed.`);
+    } else {
+      try {
+        text = String((await extract({ mimeType: file.mimeType, data: file.data })) ?? '').trim();
+      } catch (err) {
+        throw geminiError(err, 'read that PDF');
+      }
     }
     if (!text) throw httpError(422, "Couldn't find any readable text in that PDF.");
     notes = [notes, text].filter(Boolean).join('\n\n');
