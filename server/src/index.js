@@ -1,7 +1,9 @@
 
+import fs from 'node:fs';
+import path from 'node:path';
 import express from 'express';
 import cors from 'cors';
-import { config, features } from './config.js';
+import { config, features, ROOT_DIR } from './config.js';
 import { testConnection } from './db/db.js';
 import meRouter from './routes/me.js';
 import questionSetsRouter from './routes/questionSets.js';
@@ -24,6 +26,18 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/me', meRouter);
 app.use('/api/question-sets', questionSetsRouter);
 app.use('/api/notes', notesRouter);
+
+// Production: serve the built React app (client/dist) from this same server.
+// Locally, Vite serves the client instead, so this only kicks in after
+// `npm run build -w client`.
+const clientDist = path.join(ROOT_DIR, 'client', 'dist');
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+  // Any non-API URL gets the React app's index.html
+  app.get(/^(?!\/api(\/|$)).*/, (_req, res) => {
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+}
 
 // Central error handler
 app.use((err, _req, res, _next) => {
