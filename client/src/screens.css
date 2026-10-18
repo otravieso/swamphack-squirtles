@@ -32,7 +32,7 @@
 }
 .field textarea { resize: vertical; }
 
-.page button, .back {
+.page button {
   padding: 10px 16px;
   font: 700 15px Quicksand, sans-serif;
   color: #5a2a45;
@@ -41,7 +41,7 @@
   border-radius: 999px;
   cursor: pointer;
 }
-.page button:hover:not(:disabled), .back:hover { background: #ff8fbd; color: #fff; }
+.page button:hover:not(:disabled) { background: #ff8fbd; color: #fff; }
 .page button:disabled { opacity: 0.6; cursor: wait; }
 .page button.primary { background: #ff8fbd; color: #fff; }
 .page button.danger { border-color: #d0506f; }
@@ -59,5 +59,15 @@
 .sets li:last-child { border-bottom: none; }
 .sets li button { margin-left: 6px; }
 
-/* "Back to my notes" button floating over the game */
-.back { position: fixed; top: 12px; right: 14px; z-index: 10; }
+/* "Back to my notes" button floating over the game — uses the game's cream/sage theme */
+.back {
+  position: fixed; top: 12px; right: 14px; z-index: 10;
+  padding: 8px 18px;
+  font: 18px Itim, Quicksand, sans-serif;
+  color: #4f6142;
+  background: #f7f2e4e6;
+  border: 2px solid #7f9168;
+  border-radius: 999px;
+  box-shadow: 0 4px 12px #0002;
+}
+.back:hover, .back:focus-visible { background: #6e8460; color: #f7f2e4; outline: none; }
