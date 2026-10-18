@@ -27,6 +27,7 @@
 .e404-refresh:not(:disabled){animation:e404-pulse 1.4s ease-in-out infinite}
 .e404-refresh:not(:disabled):hover,.e404-refresh:focus-visible{color:#fff;transform:rotate(0) scale(1.05);outline:none}
 .e404-refresh:disabled{cursor:default;opacity:.85}
+.e404.is-preparing .e404-refresh{cursor:progress;opacity:1;animation:e404-pulse .9s ease-in-out infinite} /* writing new questions */
 @keyframes e404-pulse{50%{box-shadow:0 6px 0 #241d33,0 0 0 6px #7fd6c655,0 10px 18px #0003}}
 
 .e404-floor{position:absolute;left:0;right:0;bottom:0;height:22vh;background:var(--e404-floor);border-top:4px solid #3a2f4d}

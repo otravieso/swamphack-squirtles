@@ -21,7 +21,7 @@ const DEATHS = {
 
 // scene('404', ...) in story.js shows the "404 Exit Not Found" page instead of a background.
 const EXIT_SCENE = 'exit404';
-const REFRESH_DELAY_MS = 1600; // how long "REFRESHING…" shows after choosing Yes
+const REFRESH_DELAY_MS = 1600; // length of the 404 screen's fade-out, played once the new questions are ready
 
 const initialView = () => ({ place: '', scene: null, aggro: 0, lastChoice: null, refreshing: false, dialogue: null, choices: null, ending: null, stats: null });
 
@@ -138,29 +138,61 @@ export default function GameApp({ script = story, hooks = {} }) {
 
   useEffect(() => { preloadScenes(); }, []);
 
+  // Before a new run, let the app swap in fresh questions (hooks.onRestart may be async).
+  // Used by Play again (after dying) and by the 404 screen's refresh (after winning).
+  // `restarting` makes extra clicks while waiting do nothing.
+  const restarting = useRef(false);
+  const prepareNextRun = useCallback(async () => {
+    try {
+      await hooksRef.current.onRestart?.();
+    } catch (error) {
+      console.warn('onRestart hook failed:', error);
+    }
+  }, []);
+  const playAgain = useCallback(async () => {
+    if (restarting.current) return;
+    restarting.current = true;
+    await prepareNextRun();
+    restarting.current = false;
+    if (runtime.current) restart(); // skip if the player left the game meanwhile
+  }, [prepareNextRun, restart]);
+
   useEffect(() => {
     restart();
     return () => { generation.current += 1; runtime.current = null; };
   }, [restart]);
 
   // End of the script on the 404 page: "Do you want to refresh?" → Yes refreshes (restarts).
+  // Refreshing has two steps: 'preparing' keeps the 404 screen up (sign pulsing) while new
+  // questions are written, then 'animating' plays the fade-out and starts the new run.
   // No leaves the player on the page; the REFRESH sign restarts whenever they're ready.
   const atExit = view.scene === EXIT_SCENE;
   const beatGame = atExit && view.ending?.title === 'Chapter complete';
-  const refresh = useCallback(() => publish({ refreshing: true }), [publish]);
+  const refresh = useCallback(() => publish({ refreshing: 'preparing' }), [publish]);
   useEffect(() => {
     if (beatGame && view.lastChoice === 'Yes' && !view.refreshing) refresh();
   }, [beatGame, view.lastChoice, view.refreshing, refresh]);
   useEffect(() => {
-    if (!view.refreshing) return undefined;
-    const timer = window.setTimeout(restart, REFRESH_DELAY_MS);
+    if (view.refreshing !== 'preparing' || restarting.current) return;
+    restarting.current = true;
+    void prepareNextRun().then(() => {
+      if (runtime.current) publish({ refreshing: 'animating' });
+      else restarting.current = false;
+    });
+  }, [view.refreshing, prepareNextRun, publish]);
+  useEffect(() => {
+    if (view.refreshing !== 'animating') return undefined;
+    const timer = window.setTimeout(() => {
+      restarting.current = false;
+      restart();
+    }, REFRESH_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [view.refreshing, restart]);
 
   // Sound: background hum, creepier as the Professor gets angrier (calm on the 404 page)
   useEffect(() => { sound.start(); return () => sound.stop(); }, []);
   useEffect(() => { sound.setAggro(atExit ? 0 : view.ending?.title === 'You died' ? 3 : view.aggro); }, [atExit, view.aggro, view.ending]);
-  useEffect(() => { if (view.refreshing) sound.play('scene'); }, [view.refreshing]);
+  useEffect(() => { if (view.refreshing === 'animating') sound.play('scene'); }, [view.refreshing]); // once, when the fade-out starts
   const [muted, setMuted] = useState(sound.muted);
   useEffect(() => sound.onMutedChange(setMuted), []);
 
@@ -217,12 +249,12 @@ export default function GameApp({ script = story, hooks = {} }) {
       <div className="scenery-tint" />
     </div>
     <div className="place" hidden={!view.place || atExit}>{view.place}</div>
-    {atExit && <ExitNotFound canRefresh={beatGame} refreshing={view.refreshing} onRefresh={refresh} />}
+    {atExit && <ExitNotFound canRefresh={beatGame} preparing={view.refreshing === 'preparing'} refreshing={view.refreshing === 'animating'} onRefresh={refresh} />}
     {!atExit && <Robot talking={view.dialogue?.who === 'teacher' && typing && !view.ending} />}
     {choices && <ChoiceBox labels={choices.kind === 'question' ? choices.labels : choices.options.map(o => o.label)} onSelect={choose} />}
     {!beatGame && <DialogueBox node={view.dialogue} waitingForChoice={Boolean(choices) || Boolean(view.ending)} onAdvance={next} onTypingChange={setTyping} onType={sound.blip} />}
     {debug && view.stats && <div className="debug">{Object.entries(view.stats).map(([k, v]) => `${k}:${v}`).join('  ')}</div>}
-    {view.ending && !beatGame && <GameOver {...view.ending} onRestart={restart} />}
+    {view.ending && !beatGame && <GameOver {...view.ending} onRestart={playAgain} />}
     <button type="button" className="mute" onClick={() => sound.setMuted(!muted)}
       aria-label={muted ? 'Unmute' : 'Mute'}>{muted ? '🔇' : '🔊'}</button>
   </div>;

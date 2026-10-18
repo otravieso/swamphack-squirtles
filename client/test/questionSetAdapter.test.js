@@ -43,3 +43,21 @@ test('file helpers', () => {
   assert.equal(isPdfFile({ name: 'a.txt', type: 'text/plain' }), false);
   assert.equal(titleFromFileName('Bio Ch 3.pdf'), 'Bio Ch 3');
 });
+
+test('Play again: loading the regenerated set makes the game ask the new questions', async () => {
+  const fresh = {
+    id: 7,
+    title: 'Pipes',
+    questions: [
+      { id: 90, question: 'Fill in the blank: a pipe has a read end and a _____ end.', options: ['write', 'open', 'close', 'fork'], answerIndex: 0 },
+      { id: 91, question: 'pipe() returns two file descriptors.', options: ['True', 'False'], answerIndex: 0 },
+    ],
+  };
+  loadQuestionSetIntoGame(saved);
+  assert.equal((await getQuestion({ seen: [] })).id, '41');
+  loadQuestionSetIntoGame(fresh);
+  const first = await getQuestion({ seen: [] });
+  assert.equal(first.id, '90');
+  assert.equal(first.prompt, fresh.questions[0].question);
+  assert.deepEqual((await getQuestion({ seen: ['90'] })).choices, ['True', 'False']);
+});
