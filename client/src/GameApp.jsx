@@ -20,7 +20,7 @@ const DEATHS = {
 
 // scene('404', ...) in story.js shows the "404 Exit Not Found" page instead of a background.
 const EXIT_SCENE = 'exit404';
-const REFRESH_DELAY_MS = 1600; // shortest time "REFRESHING…" shows after choosing Yes (longer while new questions are written)
+const REFRESH_DELAY_MS = 1600; // length of the 404 screen's fade-out, played once the new questions are ready
 
 const initialView = () => ({ place: '', scene: null, aggro: 0, lastChoice: null, refreshing: false, dialogue: null, choices: null, ending: null, stats: null });
 
@@ -135,43 +135,56 @@ export default function GameApp({ script = story, hooks = {} }) {
 
   useEffect(() => { preloadScenes(); }, []);
 
-  // Start a new run with fresh questions: let the app swap in new questions first
-  // (hooks.onRestart may be async), wait at least `minDelayMs`, then restart.
+  // Before a new run, let the app swap in fresh questions (hooks.onRestart may be async).
   // Used by Play again (after dying) and by the 404 screen's refresh (after winning).
-  // Extra clicks while waiting are ignored.
+  // `restarting` makes extra clicks while waiting do nothing.
   const restarting = useRef(false);
-  const replay = useCallback(async (minDelayMs = 0) => {
+  const prepareNextRun = useCallback(async () => {
+    try {
+      await hooksRef.current.onRestart?.();
+    } catch (error) {
+      console.warn('onRestart hook failed:', error);
+    }
+  }, []);
+  const playAgain = useCallback(async () => {
     if (restarting.current) return;
     restarting.current = true;
-    try {
-      await Promise.all([
-        Promise.resolve(hooksRef.current.onRestart?.()).catch((error) => console.warn('onRestart hook failed:', error)),
-        new Promise((resolve) => window.setTimeout(resolve, minDelayMs)),
-      ]);
-    } finally {
-      restarting.current = false;
-    }
+    await prepareNextRun();
+    restarting.current = false;
     if (runtime.current) restart(); // skip if the player left the game meanwhile
-  }, [restart]);
-  const playAgain = useCallback(() => replay(0), [replay]);
+  }, [prepareNextRun, restart]);
 
   useEffect(() => {
     restart();
     return () => { generation.current += 1; runtime.current = null; };
   }, [restart]);
 
-  // End of the script on the 404 page: "Do you want to refresh?" → Yes refreshes (restarts
-  // with fresh questions; "REFRESHING…" stays up while they're written).
+  // End of the script on the 404 page: "Do you want to refresh?" → Yes refreshes (restarts).
+  // Refreshing has two steps: 'preparing' keeps the 404 screen up (sign pulsing) while new
+  // questions are written, then 'animating' plays the fade-out and starts the new run.
   // No leaves the player on the page; the REFRESH sign restarts whenever they're ready.
   const atExit = view.scene === EXIT_SCENE;
   const beatGame = atExit && view.ending?.title === 'Chapter complete';
-  const refresh = useCallback(() => publish({ refreshing: true }), [publish]);
+  const refresh = useCallback(() => publish({ refreshing: 'preparing' }), [publish]);
   useEffect(() => {
     if (beatGame && view.lastChoice === 'Yes' && !view.refreshing) refresh();
   }, [beatGame, view.lastChoice, view.refreshing, refresh]);
   useEffect(() => {
-    if (view.refreshing) void replay(REFRESH_DELAY_MS);
-  }, [view.refreshing, replay]);
+    if (view.refreshing !== 'preparing' || restarting.current) return;
+    restarting.current = true;
+    void prepareNextRun().then(() => {
+      if (runtime.current) publish({ refreshing: 'animating' });
+      else restarting.current = false;
+    });
+  }, [view.refreshing, prepareNextRun, publish]);
+  useEffect(() => {
+    if (view.refreshing !== 'animating') return undefined;
+    const timer = window.setTimeout(() => {
+      restarting.current = false;
+      restart();
+    }, REFRESH_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [view.refreshing, restart]);
 
   const next = useCallback(() => {
     const game = runtime.current;
@@ -223,7 +236,7 @@ export default function GameApp({ script = story, hooks = {} }) {
       <div className="scenery-tint" />
     </div>
     <div className="place" hidden={!view.place || atExit}>{view.place}</div>
-    {atExit && <ExitNotFound canRefresh={beatGame} refreshing={view.refreshing} onRefresh={refresh} />}
+    {atExit && <ExitNotFound canRefresh={beatGame} preparing={view.refreshing === 'preparing'} refreshing={view.refreshing === 'animating'} onRefresh={refresh} />}
     {!atExit && <Robot talking={view.dialogue?.who === 'teacher' && typing && !view.ending} />}
     {choices && <ChoiceBox labels={choices.kind === 'question' ? choices.labels : choices.options.map(o => o.label)} onSelect={choose} />}
     {!beatGame && <DialogueBox node={view.dialogue} waitingForChoice={Boolean(choices) || Boolean(view.ending)} onAdvance={next} onTypingChange={setTyping} />}

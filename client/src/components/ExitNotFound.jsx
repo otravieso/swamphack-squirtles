@@ -102,16 +102,17 @@ function BrokenProfessor() {
   </svg>;
 }
 
-export default function ExitNotFound({ canRefresh, refreshing, onRefresh }) {
-  return <div className={`e404${refreshing ? ' is-refreshing' : ''}`}>
+// preparing: new questions are being written (screen stays, sign pulses); refreshing: fade-out.
+export default function ExitNotFound({ canRefresh, preparing = false, refreshing, onRefresh }) {
+  return <div className={`e404${preparing ? ' is-preparing' : ''}${refreshing ? ' is-refreshing' : ''}`}>
     <div className="e404-copy">
       <h1 className="e404-code" data-text="404:">404:</h1>
       <p className="e404-msg">Exit Not Found…</p>
     </div>
-    <button type="button" className="e404-refresh" onClick={onRefresh} disabled={!canRefresh || refreshing}
+    <button type="button" className="e404-refresh" onClick={onRefresh} disabled={!canRefresh || preparing || refreshing}
       aria-label="Refresh (play again)">
       <span className="e404-plank" aria-hidden="true" />
-      {refreshing ? 'REFRESHING…' : 'REFRESH'}
+      {preparing || refreshing ? 'REFRESHING…' : 'REFRESH'}
     </button>
     <div className="e404-floor" aria-hidden="true" />
     <BrokenProfessor />
