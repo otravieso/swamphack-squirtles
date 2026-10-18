@@ -5,9 +5,10 @@ function segments(text) {
   return String(text ?? '').split('*').map((value, i) => ({ value, glitch: i % 2 === 1 }));
 }
 
-export default function DialogueBox({ node, onAdvance, onTypingChange, waitingForChoice }) {
+export default function DialogueBox({ node, onAdvance, onTypingChange, waitingForChoice, onType }) {
   const parts = useMemo(() => segments(node?.text), [node?.text]);
   const total = parts.reduce((sum, part) => sum + part.value.length, 0);
+  const full = parts.map(p => p.value).join('');
   const [visible, setVisible] = useState(0);
   useEffect(() => { setVisible(0); }, [node]);
   useEffect(() => {
@@ -15,6 +16,8 @@ export default function DialogueBox({ node, onAdvance, onTypingChange, waitingFo
     const timer = window.setTimeout(() => setVisible(v => Math.min(total, v + 1)), 18);
     return () => window.clearTimeout(timer);
   }, [node, visible, total]);
+  // Play a typing blip for each new letter.
+  useEffect(() => { if (node && visible > 0) onType?.(node.who, full[visible - 1]); }, [visible]);
   const typing = Boolean(node && visible < total);
   useEffect(() => { onTypingChange?.(typing); }, [typing, onTypingChange]);
 
