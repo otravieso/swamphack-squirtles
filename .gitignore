@@ -15,9 +15,6 @@ server/data/
 # Build output
 dist/
 
-# Vite's local dependency cache (rebuilt automatically by npm run dev)
-.vite/
-
 # Logs
 *.log
 npm-debug.log*
