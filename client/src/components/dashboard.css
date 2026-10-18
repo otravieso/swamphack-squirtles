@@ -1,0 +1,193 @@
+/* Notes dashboard. Everything is prefixed .db- so it can't clash with the pink
+   screens.css / game.css styles. Same palette + fonts as the login page. */
+@import url('https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Patrick+Hand&display=swap');
+
+.db-page {
+  --ink: #4a3a6b;
+  --text: #3f3358;
+  --cream: #fffcf2;
+  --mint: #e4f5ee;
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: stretch;
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 20px;
+  background: #fcefe6;
+  color: var(--text);
+  font-family: 'Patrick Hand', cursive;
+  font-size: 18px;
+}
+
+/* ---- left column ---- */
+.db-side { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.db-card {
+  box-sizing: border-box;
+  padding: 18px 20px 20px;
+  background: var(--cream);
+  border: 4px solid var(--ink);
+  border-radius: 18px;
+  box-shadow: 5px 5px 0 var(--ink);
+}
+.db-card h2 { margin: 0 0 14px; font: 400 14px 'Silkscreen', monospace; letter-spacing: 2px; color: var(--ink); }
+
+.db-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 22px 16px 16px;
+  text-align: center;
+  color: var(--ink);
+  background: var(--mint);
+  border: 3px dashed var(--ink);
+  border-radius: 16px;
+  transition: background 0.15s;
+}
+.db-drop.is-over { background: #cdebdd; }
+.db-drop-title { margin: 10px 0 0; font-size: 21px; }
+.db-drop-or { margin: 6px 0; font-size: 16px; }
+.db-drop-hint { margin: 12px 0 0; font-size: 16px; opacity: 0.8; }
+
+.db-outline {
+  padding: 6px 16px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--cream);
+  border: 2.5px solid var(--ink);
+  border-radius: 12px;
+  cursor: pointer;
+}
+.db-outline:hover:not(:disabled) { background: #f1e9d6; }
+.db-outline:disabled { opacity: 0.5; cursor: wait; }
+.db-outline.is-small { padding: 3px 12px; font-size: 17px; white-space: nowrap; }
+.db-page button:focus-visible { outline: 3px solid #7fe8d0; outline-offset: 2px; }
+
+/* file card + progress bar */
+.db-file { padding: 14px 16px; background: var(--mint); border: 3px solid var(--ink); border-radius: 16px; }
+.db-file-row { display: flex; align-items: center; gap: 8px; color: var(--ink); }
+.db-file-row svg { flex: none; }
+.db-file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 21px; color: var(--text); }
+.db-file-size { flex: none; font-size: 16px; opacity: 0.75; }
+.db-bar { height: 16px; margin: 12px 0 8px; overflow: hidden; background: #fff; border: 2.5px solid var(--ink); border-radius: 9px; }
+.db-bar-fill { height: 100%; width: 0; }
+.db-bar-fill.is-done { width: 100%; background: #a9d8c4; }
+.db-bar-fill.is-working { width: 40%; background: #f4a6b8; border-radius: 9px; animation: db-slide 1.4s ease-in-out infinite; }
+.db-file-status { margin: 0; font-size: 17px; }
+.db-link { padding: 0; font: inherit; color: var(--ink); text-decoration: underline; background: none; border: none; cursor: pointer; }
+.db-link:hover { color: #8e2a44; }
+
+/* generate button */
+.db-generate {
+  display: block;
+  width: 100%;
+  height: 50px;
+  margin-top: 14px;
+  font: 400 15px 'Silkscreen', monospace;
+  letter-spacing: 2px;
+  color: var(--ink);
+  background: var(--cream);
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+  transition: transform 0.08s, box-shadow 0.08s, background 0.15s;
+}
+.db-generate.is-primary { background: #cdebdd; }
+.db-generate:hover:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.db-generate:disabled { color: #8c86a3; background: #e4e0ec; border-color: #b8b2cc; box-shadow: none; cursor: not-allowed; }
+.db-note { margin: 12px 0 0; text-align: center; font-size: 16px; }
+.db-note.is-error { color: #8e2a44; font-size: 18px; }
+
+/* previous notes */
+.db-sets { list-style: none; margin: 0; padding: 0; }
+.db-sets li { display: flex; align-items: center; gap: 8px; padding: 10px 0; color: var(--ink); border-top: 2px solid #e6dff0; }
+.db-sets li:first-child { border-top: none; padding-top: 0; }
+.db-sets li > svg { flex: none; }
+.db-set-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.db-set-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 20px; line-height: 1.1; color: var(--text); }
+.db-set-date { font-size: 14px; opacity: 0.75; }
+.db-trash { flex: none; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; color: var(--ink); background: none; border: none; border-radius: 8px; cursor: pointer; }
+.db-trash:hover:not(:disabled) { color: #8e2a44; background: #f6e3e6; }
+.db-trash:disabled { opacity: 0.5; cursor: wait; }
+.db-empty, .db-kept { margin: 0; font-size: 16px; }
+.db-kept { margin-top: 10px; }
+
+/* ---- right stage ---- */
+.db-stage {
+  --floor: 120px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  background: #f8e6da;
+  border: 4px solid var(--ink);
+  border-radius: 20px;
+  box-shadow: 5px 5px 0 var(--ink);
+}
+.db-stage-top { position: relative; z-index: 1; display: flex; justify-content: center; padding: 26px 20px 0; }
+.db-board {
+  max-width: calc(100% - 190px);
+  padding: 16px 44px;
+  font-size: 26px;
+  text-align: center;
+  color: #fff;
+  text-wrap: balance;
+  background: #4c7a6a;
+  border: 6px solid #d9a66e;
+  border-radius: 4px;
+}
+.db-pill-wrap { position: absolute; top: 14px; right: 16px; }
+.db-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 14px 3px 4px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--cream);
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.db-pill:disabled { cursor: default; }
+.db-avatar { display: grid; place-items: center; width: 28px; height: 28px; font-size: 17px; background: #a9d8c4; border: 2px solid var(--ink); border-radius: 50%; }
+.db-menu { position: absolute; right: 0; top: calc(100% + 6px); min-width: 120px; padding: 6px; background: var(--cream); border: 3px solid var(--ink); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink); z-index: 5; }
+.db-menu button { display: block; width: 100%; padding: 6px 10px; font: inherit; text-align: left; color: var(--text); background: none; border: none; border-radius: 8px; cursor: pointer; }
+.db-menu button:hover { background: #f1e9d6; }
+
+.db-robot { position: relative; z-index: 1; flex: 1; display: flex; align-items: flex-end; justify-content: center; min-height: 440px; padding: 28px 20px 4px; }
+.db-robot > div { width: min(320px, 70%); }
+
+.db-floor { display: flex; align-items: center; justify-content: center; height: var(--floor); background: #ebc9a0; border-top: 4px solid var(--ink); }
+.db-play { position: relative; z-index: 1; padding: 0; line-height: 0; background: none; border: none; border-radius: 50%; cursor: not-allowed; transition: transform 0.12s; }
+.db-play.is-ready { cursor: pointer; }
+.db-play.is-ready:hover { transform: scale(1.08); }
+.db-play.is-ready:active { transform: scale(0.96); }
+
+/* classroom decoration behind the robot (window, light beam, bookshelf) */
+.db-decor { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.db-window { --win-w: clamp(150px, min(22vw, 34vh), 380px); position: absolute; left: 5%; bottom: calc(var(--floor) + 24%); width: var(--win-w); }
+.db-window-art { display: block; width: 100%; height: auto; }
+.db-beam { position: absolute; left: 93.6%; top: 7.4%; width: 165%; height: auto; overflow: visible; }
+.db-shelf { position: absolute; right: 5%; bottom: calc(var(--floor) - 8px); width: clamp(120px, min(17vw, 27vh), 290px); height: auto; }
+.db-mote { animation: db-mote 7s ease-in-out infinite; }
+@keyframes db-mote { 0%, 100% { transform: translateY(0); opacity: 0.2; } 50% { transform: translateY(-30px); opacity: 0.95; } }
+
+@keyframes db-slide { from { transform: translateX(-110%); } to { transform: translateX(260%); } }
+@media (prefers-reduced-motion: reduce) {
+  .db-bar-fill.is-working { animation: none; width: 60%; }
+  .db-play { transition: none; }
+  .db-mote { animation: none; opacity: 0.6; }
+}
+
+/* small windows: hide the decoration so it can't crowd the robot */
+@media (max-width: 1100px) { .db-decor { display: none; } }
+
+/* narrow screens: stack the columns */
+@media (max-width: 900px) {
+  .db-page { grid-template-columns: minmax(0, 1fr); }
+  .db-stage { order: -1; min-height: 520px; }
+  .db-board { max-width: 100%; margin-top: 44px; }
+}

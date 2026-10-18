@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { authEnabled, initAuth, logout } from './auth/auth.js';
 import { loadQuestionSetIntoGame } from './game/questionSetAdapter.js';
 import LoginPage from './components/LoginPage.jsx';
-import UploadNotes from './components/UploadNotes.jsx';
-import SavedSets from './components/SavedSets.jsx';
+import Dashboard from './components/Dashboard.jsx';
 import GameApp from './GameApp.jsx';
 import './screens.css';
 
@@ -43,17 +42,6 @@ export default function App() {
     );
   }
 
-  // Home: upload new notes or pick a saved set
-  return (
-    <div className="page">
-      {authEnabled && (
-        <p className="userbar">
-          {auth.user.username || auth.user.nickname || auth.user.name}
-          <button type="button" onClick={() => logout()}>Log out</button>
-        </p>
-      )}
-      <UploadNotes onGenerated={play} />
-      <SavedSets onPlay={play} />
-    </div>
-  );
+  // Home: upload notes, pick a saved set, press play
+  return <Dashboard user={auth.user} canLogout={authEnabled} onLogout={() => logout()} onPlay={play} />;
 }
