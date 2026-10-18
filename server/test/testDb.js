@@ -1,6 +1,4 @@
 
-// Load DATABASE_URL from the root .env (without this, pg tries localhost:5432).
-import "../src/config.js";
 import pg from "pg";
 
 const { Pool } = pg;

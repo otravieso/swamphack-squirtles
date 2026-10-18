@@ -135,22 +135,6 @@ export default function GameApp({ script = story, hooks = {} }) {
 
   useEffect(() => { preloadScenes(); }, []);
 
-  // "Play again": let the app swap in new questions first (hooks.onRestart may be async),
-  // then restart. Extra clicks while waiting are ignored.
-  const restarting = useRef(false);
-  const playAgain = useCallback(async () => {
-    if (restarting.current) return;
-    restarting.current = true;
-    try {
-      await hooksRef.current.onRestart?.();
-    } catch (error) {
-      console.warn('onRestart hook failed:', error);
-    } finally {
-      restarting.current = false;
-    }
-    if (runtime.current) restart(); // skip if the player left the game meanwhile
-  }, [restart]);
-
   useEffect(() => {
     restart();
     return () => { generation.current += 1; runtime.current = null; };

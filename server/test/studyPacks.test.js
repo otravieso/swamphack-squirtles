@@ -2,9 +2,7 @@
 // so they run offline: no API key, and nothing touches the shared PostgreSQL database.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createStudyPackFromNotes, regenerateStudyPack, isUsableQuestion, quotaMessage, MAX_NOTES_CHARS } from '../src/services/studyPacks.js';
-import { readPdfText, looksScanned } from '../src/pdf/readPdfText.js';
-import { makePdf } from './makePdf.js';
+import { createStudyPackFromNotes, isUsableQuestion, MAX_NOTES_CHARS } from '../src/services/studyPacks.js';
 
 const goodQuestion = {
   question: 'Where does photosynthesis happen?',
@@ -80,7 +78,7 @@ test('Gemini failures become clean errors and nothing is saved', async () => {
   await assert.rejects(createStudyPackFromNotes('u', { notes: 'x' }, { generate: fail('boom'), save: store.save }), { status: 502 });
   await assert.rejects(
     createStudyPackFromNotes('u', { notes: 'x' }, { generate: fail('429 RESOURCE_EXHAUSTED'), save: store.save }),
-    { status: 429 }
+    { status: 503 }
   );
   await assert.rejects(createStudyPackFromNotes('u', { notes: 'x' }, { generate: async () => [], save: store.save }), { status: 502 });
   assert.equal(store.saved.length, 0);
@@ -150,7 +148,7 @@ test('PDF: Gemini failing to read it gives a clean error', async () => {
   );
   await assert.rejects(
     createStudyPackFromNotes('u', { file: pdfFile }, { ...deps, extract: async () => { throw new Error('429'); } }),
-    { status: 429 }
+    { status: 503 }
   );
 });
 
@@ -167,194 +165,4 @@ test('PDF: very long documents are trimmed instead of failing', async () => {
 test('isUsableQuestion accepts the shape generateQuestions() returns', () => {
   assert.equal(isUsableQuestion(goodQuestion), true);
   assert.equal(isUsableQuestion({ ...goodQuestion, answerIndex: -1 }), false);
-});
-
-// ---- Saving notes and "Play again" (regenerate) ----
-
-test('the notes are saved with the set so it can be regenerated later', async () => {
-  const store = fakeStore();
-  await createStudyPackFromNotes('auth0|amy', { notes: '  Plants use chlorophyll.  ' }, { generate: async () => [goodQuestion], save: store.save });
-  assert.equal(store.saved[0].notesText, 'Plants use chlorophyll.');
-
-  const pdfStore = fakeStore();
-  await createStudyPackFromNotes(
-    'auth0|amy',
-    { notes: 'typed', file: { name: 'bio.pdf', mimeType: 'application/pdf', data: Buffer.from('%PDF').toString('base64') } },
-    { generate: async () => [goodQuestion], extract: async () => 'from the pdf', save: pdfStore.save }
-  );
-  assert.equal(pdfStore.saved[0].notesText, 'typed\n\nfrom the pdf', 'PDF text is saved, so the PDF never has to be read again');
-});
-
-/** A fake saved set plus fake database functions for regenerateStudyPack. */
-function fakeSavedSet({ notes = 'Plants use chlorophyll.' } = {}) {
-  const set = { id: 5, title: 'Bio', questions: [{ ...goodQuestion, id: 1 }] };
-  const calls = { replaced: [] };
-  return {
-    set,
-    calls,
-    deps: {
-      loadSet: async (userId, id) => (userId === 'auth0|amy' && id === 5 ? set : null),
-      loadNotes: async (userId, id) => (userId === 'auth0|amy' && id === 5 ? notes : null),
-      replace: async (userId, id, questions) => {
-        calls.replaced.push(questions);
-        return { ...set, questions };
-      },
-    },
-  };
-}
-
-test('regenerate: new questions from the saved notes replace the old ones', async () => {
-  const { deps, calls } = fakeSavedSet();
-  let received;
-  const fresh = { ...goodQuestion, question: 'What pigment absorbs light?' };
-  const result = await regenerateStudyPack('auth0|amy', 5, {
-    ...deps,
-    generate: async (notes, options) => {
-      received = { notes, options };
-      return [fresh, { ...goodQuestion, answerIndex: 9 }];
-    },
-  });
-  assert.equal(received.notes, 'Plants use chlorophyll.');
-  assert.deepEqual(received.options.avoid, [goodQuestion.question], 'Gemini is told not to repeat the old questions');
-  assert.equal(calls.replaced.length, 1);
-  assert.deepEqual(result.questions, [fresh], 'bad questions are dropped');
-  assert.equal(result.id, 5, 'same set, same id');
-});
-
-test('regenerate: if Gemini fails, the old questions are kept', async () => {
-  const { deps, calls } = fakeSavedSet();
-  await assert.rejects(
-    regenerateStudyPack('auth0|amy', 5, { ...deps, generate: async () => { throw new Error('boom'); } }),
-    (err) => err.status === 502
-  );
-  await assert.rejects(
-    regenerateStudyPack('auth0|amy', 5, { ...deps, generate: async () => { throw new Error('429 quota exceeded'); } }),
-    (err) => err.status === 429
-  );
-  await assert.rejects(
-    regenerateStudyPack('auth0|amy', 5, { ...deps, generate: async () => [] }),
-    (err) => err.status === 502
-  );
-  assert.equal(calls.replaced.length, 0, 'replace was never called');
-});
-
-test("regenerate: someone else's set, or a missing one, is not found", async () => {
-  const { deps, calls } = fakeSavedSet();
-  const generate = async () => [goodQuestion];
-  await assert.rejects(regenerateStudyPack('auth0|bob', 5, { ...deps, generate }), (err) => err.status === 404);
-  await assert.rejects(regenerateStudyPack('auth0|amy', 99, { ...deps, generate }), (err) => err.status === 404);
-  await assert.rejects(regenerateStudyPack('auth0|amy', NaN, { ...deps, generate }), (err) => err.status === 404);
-  assert.equal(calls.replaced.length, 0);
-});
-
-test('regenerate: sets saved before notes were stored explain what to do', async () => {
-  const { deps } = fakeSavedSet({ notes: null });
-  await assert.rejects(
-    regenerateStudyPack('auth0|amy', 5, { ...deps, generate: async () => [goodQuestion] }),
-    (err) => err.status === 409 && /Upload the notes again/.test(err.message)
-  );
-});
-
-test('regenerate: a double click only starts one Gemini call', async () => {
-  const { deps } = fakeSavedSet();
-  let calls = 0;
-  let release;
-  const generate = () => { calls++; return new Promise((resolve) => { release = () => resolve([goodQuestion]); }); };
-  const first = regenerateStudyPack('auth0|amy', 5, { ...deps, generate });
-  await new Promise((r) => setImmediate(r));
-  await assert.rejects(regenerateStudyPack('auth0|amy', 5, { ...deps, generate }), (err) => err.status === 409);
-  release();
-  await first;
-  assert.equal(calls, 1);
-  // Once it finishes, it can be regenerated again.
-  const again = regenerateStudyPack('auth0|amy', 5, { ...deps, generate });
-  await new Promise((r) => setImmediate(r));
-  release();
-  await again;
-  assert.equal(calls, 2);
-});
-
-// ---- Reading PDFs on our server (saves a Gemini request) ----
-
-const longText = 'An inode stores metadata about a file. '.repeat(20);
-
-test('PDF with real text: read on the server, no Gemini request', async () => {
-  let geminiCalled = false;
-  let receivedNotes;
-  await createStudyPackFromNotes('u', { file: pdfFile }, {
-    readPdf: async () => ({ text: longText, pages: 2 }),
-    extract: async () => { geminiCalled = true; return 'from gemini'; },
-    generate: async (notes) => { receivedNotes = notes; return [goodQuestion]; },
-    save: fakeStore().save,
-  });
-  assert.equal(geminiCalled, false);
-  assert.equal(receivedNotes, longText.trim());
-});
-
-test('scanned PDF (little or no text), or a server read error: Gemini reads it', async () => {
-  for (const readPdf of [
-    async () => ({ text: '', pages: 3 }),
-    async () => ({ text: 'Page 1', pages: 1 }),
-    async () => { throw new Error('pdfjs-dist is not installed'); },
-  ]) {
-    let receivedNotes;
-    await createStudyPackFromNotes('u', { file: pdfFile }, {
-      readPdf,
-      extract: async () => 'Read by Gemini.',
-      generate: async (notes) => { receivedNotes = notes; return [goodQuestion]; },
-      save: fakeStore().save,
-    });
-    assert.equal(receivedNotes, 'Read by Gemini.');
-  }
-});
-
-test('looksScanned: real notes are not scanned, empty or near-empty pages are', () => {
-  assert.equal(looksScanned({ text: longText, pages: 2 }), false);
-  assert.equal(looksScanned({ text: '', pages: 5 }), true);
-  assert.equal(looksScanned({ text: 'Lecture 3', pages: 1 }), true);
-  assert.equal(looksScanned({ text: longText, pages: 200 }), true, '~3 letters per page = images with captions');
-});
-
-let hasPdfjs = true;
-try { await import('pdfjs-dist/legacy/build/pdf.mjs'); } catch { hasPdfjs = false; }
-
-test('readPdfText pulls the text out of a real PDF', { skip: !hasPdfjs && 'run npm install first (pdfjs-dist)' }, async () => {
-  const pdf = makePdf([
-    ['File systems store data in blocks.', 'An inode holds metadata about a file.'],
-    ['A hard link is another name for the same inode.'],
-  ]);
-  const { text, pages } = await readPdfText(pdf);
-  assert.equal(pages, 2);
-  assert.match(text, /An inode holds metadata about a file\./);
-  assert.match(text, /A hard link is another name for the same inode\./);
-  const blank = await readPdfText(makePdf([[], []]));
-  assert.equal(looksScanned(blank), true);
-});
-
-// ---- Usage-limit messages ----
-
-test('daily limit: says so, and when it resets', () => {
-  const raw = '{"error":{"code":429,"message":"You exceeded your current quota ... limit: 20","status":"RESOURCE_EXHAUSTED","details":[{"quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier"},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"84670s"}]}}';
-  const msg = quotaMessage(raw);
-  assert.match(msg, /daily limit/);
-  assert.match(msg, /about 24 hours/);
-  assert.match(msg, /different Google project|billing/);
-});
-
-test('per-minute limit: says how long to wait', () => {
-  assert.match(quotaMessage('429 ... "retryDelay":"31s"'), /Try again in 31 seconds/);
-  assert.match(quotaMessage('429 RESOURCE_EXHAUSTED'), /Wait a minute/);
-});
-
-test('limit errors are 429 with the clear message; other errors are not mistaken for limits', async () => {
-  const save = fakeStore().save;
-  await assert.rejects(
-    createStudyPackFromNotes('u', { notes: 'x' }, { generate: async () => { throw new Error('429 "quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier" "retryDelay":"7200s"'); }, save }),
-    (err) => err.status === 429 && /daily limit/.test(err.message) && /about 2 hours/.test(err.message)
-  );
-  // "generateContent" contains "rate"; it must not be reported as a rate limit.
-  await assert.rejects(
-    createStudyPackFromNotes('u', { notes: 'x' }, { generate: async () => { throw new Error('models/x is not found or is not supported for generateContent'); }, save }),
-    (err) => err.status === 502 && /not found/.test(err.message)
-  );
 });

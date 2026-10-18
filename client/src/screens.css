@@ -71,18 +71,3 @@
   box-shadow: 0 4px 12px #0002;
 }
 .back:hover, .back:focus-visible { background: #6e8460; color: #f7f2e4; outline: none; }
-
-/* "Play again" note under the back button: new questions being written, or why they weren't.
-   Same cream/sage look as .back */
-.regen {
-  position: fixed; top: 60px; right: 14px; z-index: 10; margin: 0;
-  max-width: 320px; padding: 8px 14px;
-  font: 16px Itim, Quicksand, sans-serif;
-  color: #4f6142;
-  background: #f7f2e4e6;
-  border: 2px solid #7f9168;
-  border-radius: 14px;
-  box-shadow: 0 4px 12px #0002;
-}
-.regen-working { background: #dfe9cf; }
-.regen-failed { border-color: #b5654f; }
