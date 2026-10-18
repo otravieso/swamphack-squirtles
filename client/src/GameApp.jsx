@@ -225,6 +225,6 @@ export default function GameApp({ script = story, hooks = {} }) {
     {choices && <ChoiceBox labels={choices.kind === 'question' ? choices.labels : choices.options.map(o => o.label)} onSelect={choose} />}
     {!beatGame && <DialogueBox node={view.dialogue} waitingForChoice={Boolean(choices) || Boolean(view.ending)} onAdvance={next} onTypingChange={setTyping} />}
     {debug && view.stats && <div className="debug">{Object.entries(view.stats).map(([k, v]) => `${k}:${v}`).join('  ')}</div>}
-    {view.ending && !beatGame && <GameOver {...view.ending} onRestart={restart} />}
+    {view.ending && !beatGame && <GameOver {...view.ending} onRestart={playAgain} />}
   </div>;
 }
